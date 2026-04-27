@@ -9,7 +9,7 @@ const users = [
   { id: 1, name: 'John Doe', email: 'john@example.com', role: 'standard_user', projects: ['E-commerce Platform'], access: 'read' },
   { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'project_manager', projects: ['API Gateway', 'Data Analytics'], access: 'write' },
   { id: 3, name: 'Bob Johnson', email: 'bob@example.com', role: 'standard_user', projects: ['Payment Service'], access: 'read' },
-  { id: 4, name: 'Alice Brown', email: 'alice@example.com', role: 'dba', projects: ['All Projects'], access: 'admin' },
+  { id: 4, name: 'Alice Brown', email: 'alice@example.com', role: 'student', projects: ['All Projects'], access: 'admin' },
   { id: 5, name: 'Charlie Wilson', email: 'charlie@example.com', role: 'standard_user', projects: ['User Management'], access: 'read' },
 ]
 

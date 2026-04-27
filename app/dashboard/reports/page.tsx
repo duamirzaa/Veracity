@@ -385,11 +385,11 @@ export default function ReportsPage() {
                   >
                     <option value="json">JSON</option>
                     <option value="xml">XML</option>
-                    <option value="pdf" disabled={!user?.is_pro}>
-                      PDF {!user?.is_pro && '(Pro Feature)'}
+                    <option value="pdf" disabled={!(user?.is_pro || user?.role === 'student')}>
+                      PDF {!(user?.is_pro || user?.role === 'student') && '(Pro Feature)'}
                     </option>
                   </select>
-                  {formData.report_format === 'pdf' && !user?.is_pro && (
+                  {formData.report_format === 'pdf' && !(user?.is_pro || user?.role === 'student') && (
                     <p className="mt-2 text-sm text-yellow-400">
                       PDF reports are available for Pro users only. Upgrade to Pro to unlock this feature.
                     </p>

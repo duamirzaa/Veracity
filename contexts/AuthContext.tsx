@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import Cookies from 'js-cookie'
 
-export type UserRole = 'dba' | 'project_manager' | 'standard_user'
+export type UserRole = 'dba' | 'project_manager' | 'standard_user' | 'student'
 
 export interface User {
   id: number
@@ -53,6 +53,24 @@ const mockUsers: User[] = [
     username: 'user',
     full_name: 'Standard User',
     role: 'standard_user',
+    is_pro: false,
+    is_active: true,
+  },
+  {
+    id: 4,
+    email: 'student.pro@veracity.com',
+    username: 'student_pro',
+    full_name: 'Pro Student',
+    role: 'student',
+    is_pro: true,
+    is_active: true,
+  },
+  {
+    id: 5,
+    email: 'student.trial@veracity.com',
+    username: 'student_trial',
+    full_name: 'Trial Student',
+    role: 'student',
     is_pro: false,
     is_active: true,
   },
