@@ -9,14 +9,13 @@ import Link from 'next/link'
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
     email: '',
-    username: '',
     full_name: '',
     password: '',
     confirmPassword: '',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { register, oauthLogin } = useAuth()
+  const { register } = useAuth()
   const router = useRouter()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -32,16 +31,16 @@ export default function RegisterPage() {
       return
     }
 
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters')
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters')
       return
     }
 
     setLoading(true)
 
     try {
-      await register(formData.email, formData.username, formData.password, formData.full_name)
-      router.push('/dashboard')
+      await register(formData.email, formData.password, formData.full_name)
+      router.push('/auth/login')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed')
     } finally {
@@ -49,10 +48,7 @@ export default function RegisterPage() {
     }
   }
 
-  const handleOAuth = (provider: 'github' | 'google' | 'microsoft') => {
-    oauthLogin(provider)
-    router.push('/dashboard')
-  }
+
 
   return (
     <div className="min-h-screen relative flex overflow-hidden">
@@ -191,22 +187,6 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-2">
-                Username
-              </label>
-              <input
-                id="username"
-                name="username"
-                type="text"
-                value={formData.username}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                placeholder="johndoe"
-              />
-            </div>
-
-            <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
                 Email
               </label>
@@ -263,37 +243,7 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-dark-600"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-dark-800 text-gray-400">Or sign up with</span>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-3 gap-3">
-              <button
-                onClick={() => handleOAuth('github')}
-                className="flex items-center justify-center px-4 py-3 bg-dark-700/50 hover:bg-dark-600/70 border border-dark-600/50 hover:border-primary-500/50 rounded-lg transition-all duration-200 hover:scale-105 backdrop-blur-sm"
-              >
-                <FaGithub className="text-xl text-white" />
-              </button>
-              <button
-                onClick={() => handleOAuth('google')}
-                className="flex items-center justify-center px-4 py-3 bg-dark-700/50 hover:bg-dark-600/70 border border-dark-600/50 hover:border-primary-500/50 rounded-lg transition-all duration-200 hover:scale-105 backdrop-blur-sm"
-              >
-                <FaGoogle className="text-xl text-white" />
-              </button>
-              <button
-                onClick={() => handleOAuth('microsoft')}
-                className="flex items-center justify-center px-4 py-3 bg-dark-700/50 hover:bg-dark-600/70 border border-dark-600/50 hover:border-primary-500/50 rounded-lg transition-all duration-200 hover:scale-105 backdrop-blur-sm"
-              >
-                <FaMicrosoft className="text-xl text-white" />
-              </button>
-            </div>
-          </div>
+          
 
           <p className="mt-6 text-center text-sm text-gray-400">
             Already have an account?{' '}

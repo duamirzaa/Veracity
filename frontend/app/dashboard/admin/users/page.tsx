@@ -1,36 +1,64 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import DashboardLayout from '@/components/Layout/DashboardLayout'
 import { useAuth } from '@/contexts/AuthContext'
-import { FaShieldAlt, FaEdit, FaTrash, FaPlus, FaSearch } from 'react-icons/fa'
+import { FaShieldAlt, FaEdit, FaTrash, FaPlus, FaSearch, FaSpinner } from 'react-icons/fa'
+import { getUsers } from '@/services/admin'
+import type { UserWithAccess } from '@/services/admin'
 
-const users = [
-  { id: 1, name: 'John Doe', email: 'john@example.com', role: 'standard_user', projects: ['E-commerce Platform'], access: 'read' },
-  { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'project_manager', projects: ['API Gateway', 'Data Analytics'], access: 'write' },
-  { id: 3, name: 'Bob Johnson', email: 'bob@example.com', role: 'standard_user', projects: ['Payment Service'], access: 'read' },
-  { id: 4, name: 'Alice Brown', email: 'alice@example.com', role: 'student', projects: ['All Projects'], access: 'admin' },
-  { id: 5, name: 'Charlie Wilson', email: 'charlie@example.com', role: 'standard_user', projects: ['User Management'], access: 'read' },
+const mockUsers: UserWithAccess[] = [
+  { id: 1, email: 'john@example.com', full_name: 'John Doe', role: 'user', tier: 'pro', is_active: true, is_email_verified: true, last_login_at: '2024-01-15T10:00:00Z', projects: ['E-commerce Platform'], access: 'read' },
+  { id: 2, email: 'jane@example.com', full_name: 'Jane Smith', role: 'admin', tier: 'pro', is_active: true, is_email_verified: true, last_login_at: '2024-01-15T11:00:00Z', projects: ['API Gateway', 'Data Analytics'], access: 'write' },
+  { id: 3, email: 'bob@example.com', full_name: 'Bob Johnson', role: 'user', tier: 'free', is_active: true, is_email_verified: true, last_login_at: '2024-01-14T09:00:00Z', projects: ['Payment Service'], access: 'read' },
+  { id: 4, email: 'alice@example.com', full_name: 'Alice Brown', role: 'student', tier: 'free', is_active: true, is_email_verified: false, last_login_at: '2024-01-10T14:00:00Z', projects: ['All Projects'], access: 'admin' },
+  { id: 5, email: 'charlie@example.com', full_name: 'Charlie Wilson', role: 'user', tier: 'pro', is_active: true, is_email_verified: true, last_login_at: '2024-01-15T15:00:00Z', projects: ['User Management'], access: 'read' },
 ]
 
 export default function UserAccessPage() {
   const { user, isAuthenticated } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
-  const [usersList, setUsersList] = useState(users)
+  const [usersList, setUsersList] = useState<UserWithAccess[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Load users on mount
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const result = await getUsers(1, 100)
+        setUsersList(result.users)
+      } catch (err) {
+        console.error('Failed to load users:', err)
+        setError('Failed to load users')
+        // Keep mock data as fallback
+        setUsersList(mockUsers)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (isAuthenticated && user?.role === 'admin') {
+      loadUsers()
+    }
+  }, [isAuthenticated, user])
 
   // Wait for auth to load
   if (!isAuthenticated || !user) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-full">
-          <div className="animate-pulse text-gray-400">Loading...</div>
+        <div className="flex items-center justify-center h-full gap-3">
+          <FaSpinner className="animate-spin text-primary-500" />
+          <span className="text-gray-400">Loading...</span>
         </div>
       </DashboardLayout>
     )
   }
 
   // Only DBA can access
-  if (user.role !== 'dba') {
+  if (user.role !== 'admin') {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-full">
@@ -46,7 +74,7 @@ export default function UserAccessPage() {
 
   const filteredUsers = usersList.filter(
     (u) =>
-      u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (u.full_name?.toLowerCase() ?? '').includes(searchTerm.toLowerCase()) ||
       u.email.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
@@ -81,6 +109,21 @@ export default function UserAccessPage() {
           </div>
         </div>
 
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 text-red-400">
+            {error}
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <div className="bg-blue-500/20 border border-blue-500/50 rounded-lg p-4 text-blue-400 flex items-center gap-2">
+            <FaSpinner className="animate-spin" />
+            <p>Loading users...</p>
+          </div>
+        )}
+
         <div className="bg-dark-800/80 backdrop-blur-sm rounded-xl border border-dark-700/50 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -97,7 +140,7 @@ export default function UserAccessPage() {
               <tbody className="divide-y divide-dark-700">
                 {filteredUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-dark-700/30 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-white font-medium">{user.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-white font-medium">{user.full_name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-gray-400">{user.email}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="px-3 py-1 bg-primary-500/20 text-primary-400 rounded-full text-xs font-semibold capitalize">

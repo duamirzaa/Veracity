@@ -28,7 +28,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter()
   const pathname = usePathname()
 
-  const navigation = user?.role === 'dba'
+  const navigation = user?.role === 'admin'
     ? [
         { name: 'Analysis Dashboard', href: '/dashboard/admin/dashboard', icon: FaChartLine },
         { name: 'Project Registry', href: '/dashboard/admin/projects', icon: FaProjectDiagram },
@@ -126,12 +126,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="flex items-center gap-3 mb-3 p-3 rounded-xl bg-dark-700/30 backdrop-blur-sm border border-dark-600/30">
             <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
               <span className="text-sm font-semibold text-dark-900">
-                {user?.username?.charAt(0).toUpperCase() || 'U'}
+                {user?.email?.charAt(0).toUpperCase() || 'U'}
               </span>
             </div>
             {sidebarOpen && (
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{user?.full_name || user?.username}</p>
+                <p className="text-sm font-medium text-white truncate">{user?.full_name || user?.email}</p>
                 <p className="text-xs text-gray-400 capitalize">{user?.role?.replace('_', ' ')}</p>
               </div>
             )}
@@ -155,7 +155,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               {navigation.find((item) => isActive(item.href))?.name || 'Dashboard'}
             </h2>
             <div className="flex items-center gap-4">
-              {user?.is_pro && (
+              {user?.tier === 'pro' && (
                 <span className="px-3 py-1 bg-primary-500/20 text-primary-400 text-xs font-semibold rounded-full">
                   PRO
                 </span>

@@ -1,85 +1,99 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/Layout/DashboardLayout'
-import { FaPlus, FaGithub, FaFolder, FaTrash, FaEdit, FaCode } from 'react-icons/fa'
+import { FaPlus, FaGithub, FaFolder, FaTrash, FaEdit, FaCode, FaSpinner } from 'react-icons/fa'
+import * as projectsService from '@/services/projects'
+import type { Project } from '@/services/projects'
 
-// Mock projects data
-const mockProjects = [
-  {
-    id: 1,
-    name: 'E-commerce Platform',
-    description: 'Main e-commerce application with payment integration',
-    repository_url: 'https://github.com/user/ecommerce',
-    repository_type: 'github',
-    files_analyzed: 45,
-    last_analyzed: '2024-01-15',
-  },
-  {
-    id: 2,
-    name: 'API Gateway',
-    description: 'Microservices API gateway implementation',
-    repository_url: 'https://github.com/user/api-gateway',
-    repository_type: 'github',
-    files_analyzed: 32,
-    last_analyzed: '2024-01-14',
-  },
-  {
-    id: 3,
-    name: 'Data Analytics',
-    description: 'Python data processing and analytics tools',
-    repository_url: null,
-    repository_type: null,
-    files_analyzed: 18,
-    last_analyzed: '2024-01-13',
-  },
-]
 
 export default function ProjectsPage() {
+  const [submitting, setSubmitting] = useState(false)
   const router = useRouter()
-  const [projects, setProjects] = useState(mockProjects)
+  const [projects, setProjects] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    repository_url: '',
+    project_name: '',
+    project_description: '',
   })
+  const [fileInput, setFileInput] = useState<File | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    const repository_url = formData.repository_url.trim() || null
-    const newProject = repository_url
-      ? {
-          id: projects.length + 1,
-          name: formData.name,
-          description: formData.description,
-          repository_url: repository_url,
-          repository_type: 'github' as const,
-          files_analyzed: 0,
-          last_analyzed: new Date().toISOString().split('T')[0],
-        }
-      : {
-          id: projects.length + 1,
-          name: formData.name,
-          description: formData.description,
-          repository_url: null,
-          repository_type: null,
-          files_analyzed: 0,
-          last_analyzed: new Date().toISOString().split('T')[0],
-        }
-    setProjects([...projects, newProject])
-    setFormData({ name: '', description: '', repository_url: '' })
-    setShowModal(false)
+  // Fetch projects on mount
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const response = await projectsService.getProjects(1, 100)
+        setProjects(response.projects)
+      } catch (err) {
+        console.error('Failed to fetch projects:', err)
+        setError('Failed to load projects')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProjects()
+  }, [])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
-  const handleDelete = (id: number) => {
-    setProjects(projects.filter((p) => p.id !== id))
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setFileInput(file)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!fileInput) {
+      setError('Please select a Python file')
+      return
+    }
+
+    try {
+      setSubmitting(true)
+      setError(null)
+      const newProject = await projectsService.createProject({
+        project_name: formData.project_name,
+        project_description: formData.project_description || undefined,
+        file: fileInput,
+      })
+      
+      setProjects([...projects, newProject])
+      setFormData({ project_name: '', project_description: '' })
+      setFileInput(null)
+      setShowModal(false)
+    } catch (err) {
+      console.error('Failed to create project:', err)
+      setError('Failed to create project')
+    }
+    finally {
+    setSubmitting(false)  // ← stop loading always
+  }
+  }
+
+  const handleDelete = async (id: number) => {
+    try {
+      setError(null)
+      await projectsService.archiveProject(id)
+      setProjects(projects.filter((p) => p.id !== id))
+    } catch (err) {
+      console.error('Failed to delete project:', err)
+      setError('Failed to delete project')
+    }
   }
 
   const handleAnalyze = (projectId: number) => {
-    // Navigate to analysis page
-    router.push('/dashboard/analysis')
+    router.push(`/dashboard/analysis?projectId=${projectId}`)
   }
 
   return (
@@ -98,9 +112,42 @@ export default function ProjectsPage() {
           </button>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-6 text-red-400">
+            <p>{error}</p>
+          </div>
+        )}
+
         {/* Projects Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projects.map((project) => (
+          {loading ? (
+            // Loading skeleton
+            Array(6).fill(0).map((_, i) => (
+              <div key={i} className="bg-dark-800 rounded-lg p-6 border border-dark-700 animate-pulse">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3 w-full">
+                    <div className="w-10 h-10 rounded-lg bg-dark-600"></div>
+                    <div className="flex-1">
+                      <div className="h-4 bg-dark-600 rounded w-24 mb-2"></div>
+                      <div className="h-3 bg-dark-600 rounded w-32"></div>
+                    </div>
+                  </div>
+                </div>
+                <div className="h-3 bg-dark-600 rounded w-full mb-4"></div>
+                <div className="h-3 bg-dark-600 rounded w-24"></div>
+              </div>
+            ))
+          ) : projects.length === 0 ? (
+            // No projects
+            <div className="col-span-full text-center py-12">
+              <FaFolder className="text-6xl text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-400 text-lg">No projects yet</p>
+              <p className="text-gray-500 text-sm">Create your first project to get started</p>
+            </div>
+          ) : (
+            // Loaded projects
+            projects.map((project) => (
             <div
               key={project.id}
               className="bg-dark-800 rounded-lg p-6 border border-dark-700 hover:border-primary-500/50 transition-all"
@@ -108,24 +155,10 @@ export default function ProjectsPage() {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-primary-500/20 border border-primary-500/30 flex items-center justify-center flex-shrink-0">
-                    {project.repository_type === 'github' ? (
-                      <FaGithub className="text-xl text-primary-400" />
-                    ) : (
-                      <FaFolder className="text-xl text-primary-400" />
-                    )}
+                    <FaFolder className="text-xl text-primary-400" />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-white">{project.name}</h3>
-                    {project.repository_url && (
-                      <a
-                        href={project.repository_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary-500 hover:text-primary-400"
-                      >
-                        View Repository
-                      </a>
-                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -146,9 +179,9 @@ export default function ProjectsPage() {
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2 text-gray-400">
                   <FaCode />
-                  <span>{project.files_analyzed} files</span>
+                  <span>{project.analysis_count} files</span>
                 </div>
-                <span className="text-gray-500">Updated {project.last_analyzed}</span>
+                <span className="text-gray-500">Updated {new Date(project.updated_at).toLocaleDateString()}</span>
               </div>
 
               <button
@@ -158,7 +191,8 @@ export default function ProjectsPage() {
                 Analyze Code
               </button>
             </div>
-          ))}
+            ))
+          )}
         </div>
 
         {/* Add Project Modal */}
@@ -171,8 +205,9 @@ export default function ProjectsPage() {
                   <label className="block text-sm font-medium text-gray-300 mb-2">Project Name</label>
                   <input
                     type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    name="project_name"
+                    value={formData.project_name}
+                    onChange={handleChange}
                     required
                     className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                     placeholder="My Project"
@@ -181,8 +216,9 @@ export default function ProjectsPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Description</label>
                   <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    name="project_description"
+                    value={formData.project_description}
+                    onChange={handleChange}
                     className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                     rows={3}
                     placeholder="Project description..."
@@ -190,15 +226,17 @@ export default function ProjectsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    GitHub Repository URL (Optional)
+                    Python File (.py)
                   </label>
                   <input
-                    type="url"
-                    value={formData.repository_url}
-                    onChange={(e) => setFormData({ ...formData, repository_url: e.target.value })}
+                    type="file"
+                    name="file"
+                    accept=".py"
+                    onChange={handleFileChange}
+                    required
                     className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="https://github.com/user/repo"
                   />
+                  {fileInput && <p className="text-sm text-green-400 mt-1">Selected: {fileInput.name}</p>}
                 </div>
                 <div className="flex gap-3">
                   <button

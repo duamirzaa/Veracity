@@ -67,3 +67,14 @@ export const getPredictionsByProjectId = async (projectId: number): Promise<Pred
     throw error
   }
 }
+
+// Add this at the bottom ↓
+const predictionsService = {
+  analyzeCode,
+  getPredictions,
+  getPredictionById,
+  getPredictionsByProjectId,
+}
+
+export default predictionsService
+export { predictionsService }

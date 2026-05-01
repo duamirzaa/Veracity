@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
-import { FaGithub, FaGoogle, FaMicrosoft } from 'react-icons/fa'
 import Link from 'next/link'
 
 export default function LoginPage() {
@@ -11,7 +10,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { login, oauthLogin } = useAuth()
+  const { login } = useAuth()
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,11 +26,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const handleOAuth = (provider: 'github' | 'google' | 'microsoft') => {
-    oauthLogin(provider)
-    router.push('/dashboard')
   }
 
   return (
@@ -113,38 +107,6 @@ export default function LoginPage() {
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
-
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-dark-600"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-dark-800 text-gray-400">Or continue with</span>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-3 gap-3">
-              <button
-                onClick={() => handleOAuth('github')}
-                className="flex items-center justify-center px-4 py-3 bg-dark-700/50 hover:bg-dark-600/70 border border-dark-600/50 hover:border-primary-500/50 rounded-lg transition-all duration-200 hover:scale-105 backdrop-blur-sm"
-              >
-                <FaGithub className="text-xl text-white" />
-              </button>
-              <button
-                onClick={() => handleOAuth('google')}
-                className="flex items-center justify-center px-4 py-3 bg-dark-700/50 hover:bg-dark-600/70 border border-dark-600/50 hover:border-primary-500/50 rounded-lg transition-all duration-200 hover:scale-105 backdrop-blur-sm"
-              >
-                <FaGoogle className="text-xl text-white" />
-              </button>
-              <button
-                onClick={() => handleOAuth('microsoft')}
-                className="flex items-center justify-center px-4 py-3 bg-dark-700/50 hover:bg-dark-600/70 border border-dark-600/50 hover:border-primary-500/50 rounded-lg transition-all duration-200 hover:scale-105 backdrop-blur-sm"
-              >
-                <FaMicrosoft className="text-xl text-white" />
-              </button>
-            </div>
-          </div>
 
           <p className="mt-6 text-center text-sm text-gray-400">
             Don&apos;t have an account?{' '}

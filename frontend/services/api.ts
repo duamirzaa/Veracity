@@ -3,7 +3,8 @@ declare const process: any;
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios'
 import Cookies from 'js-cookie'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
+// Backend API base URL - changed from port 8000 to 5000 to match backend
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api'
 
 // Create Axios instance
 const apiClient: AxiosInstance = axios.create({

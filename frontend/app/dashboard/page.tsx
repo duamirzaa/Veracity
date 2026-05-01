@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import DashboardLayout from '@/components/Layout/DashboardLayout'
 import Link from 'next/link'
-import { FaChartLine, FaExclamationTriangle, FaCheckCircle, FaClock, FaBug, FaShieldAlt, FaChartBar, FaTasks } from 'react-icons/fa'
+import { FaChartLine, FaExclamationTriangle, FaCheckCircle, FaClock, FaBug, FaShieldAlt, FaChartBar, FaTasks, FaSpinner } from 'react-icons/fa'
 import {
   LineChart,
   Line,
@@ -18,63 +18,24 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
-
-// Mock data
-const riskTrends = [
-  { date: 'Jan', low: 45, medium: 30, high: 15, critical: 10 },
-  { date: 'Feb', low: 50, medium: 25, high: 15, critical: 10 },
-  { date: 'Mar', low: 48, medium: 28, high: 14, critical: 10 },
-  { date: 'Apr', low: 52, medium: 26, high: 12, critical: 10 },
-  { date: 'May', low: 55, medium: 24, high: 11, critical: 10 },
-  { date: 'Jun', low: 58, medium: 22, high: 10, critical: 10 },
-]
-
-const defectStats = [
-  { 
-    name: 'Total Predictions', 
-    value: '1,234', 
-    change: '+12%', 
-    positive: true,
-    icon: FaChartBar,
-    color: 'from-primary-500 to-primary-400',
-    bgColor: 'bg-primary-500/20 border border-primary-500/30',
-    iconColor: 'text-primary-400'
-  },
-  { 
-    name: 'High Risk', 
-    value: '89', 
-    change: '-5%', 
-    positive: true,
-    icon: FaExclamationTriangle,
-    color: 'from-primary-500 to-primary-400',
-    bgColor: 'bg-primary-500/20 border border-primary-500/30',
-    iconColor: 'text-primary-400'
-  },
-  { 
-    name: 'Critical Issues', 
-    value: '23', 
-    change: '+3%', 
-    positive: false,
-    icon: FaBug,
-    color: 'from-primary-500 to-primary-400',
-    bgColor: 'bg-primary-500/20 border border-primary-500/30',
-    iconColor: 'text-primary-400'
-  },
-  { 
-    name: 'Resolved', 
-    value: '456', 
-    change: '+18%', 
-    positive: true,
-    icon: FaCheckCircle,
-    color: 'from-primary-500 to-primary-400',
-    bgColor: 'bg-primary-500/20 border border-primary-500/30',
-    iconColor: 'text-primary-400'
-  },
-]
+import * as dashboardService from '@/services/dashboard'
 
 export default function DashboardPage() {
   const { isAuthenticated, user } = useAuth()
   const router = useRouter()
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [stats, setStats] = useState<any>(null)
+
+  // Default mock data for fallback
+  const defaultRiskTrends = [
+    { date: 'Jan', low: 45, medium: 30, high: 15, critical: 10 },
+    { date: 'Feb', low: 50, medium: 25, high: 15, critical: 10 },
+    { date: 'Mar', low: 48, medium: 28, high: 14, critical: 10 },
+    { date: 'Apr', low: 52, medium: 26, high: 12, critical: 10 },
+    { date: 'May', low: 55, medium: 24, high: 11, critical: 10 },
+    { date: 'Jun', low: 58, medium: 22, high: 10, critical: 10 },
+  ]
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -82,17 +43,84 @@ export default function DashboardPage() {
       return
     }
     // Redirect admin users to admin dashboard
-    if (user?.role === 'dba') {
+    if (user?.role === 'admin') {
       router.push('/dashboard/admin/dashboard')
     }
   }, [isAuthenticated, user, router])
 
+  // Fetch dashboard stats on mount
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!isAuthenticated) return
+      
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await dashboardService.getDashboardStats()
+        setStats(data)
+      } catch (err) {
+        console.error('Failed to fetch dashboard stats:', err)
+        setError('Failed to load dashboard data')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStats()
+  }, [isAuthenticated])
+
   if (!isAuthenticated) return null
 
   // Don't show user dashboard for admin
-  if (user?.role === 'dba') {
+  if (user?.role === 'admin') {
     return null
   }
+
+  // Build stats array from fetched data
+  const defectStats = stats ? [
+    { 
+      name: 'Total Predictions', 
+      value: stats.totalPredictions?.toLocaleString() || '0', 
+      change: '+12%', 
+      positive: true,
+      icon: FaChartBar,
+      color: 'from-primary-500 to-primary-400',
+      bgColor: 'bg-primary-500/20 border border-primary-500/30',
+      iconColor: 'text-primary-400'
+    },
+    { 
+      name: 'High Risk', 
+      value: stats.highRiskCount?.toString() || '0', 
+      change: '-5%', 
+      positive: true,
+      icon: FaExclamationTriangle,
+      color: 'from-primary-500 to-primary-400',
+      bgColor: 'bg-primary-500/20 border border-primary-500/30',
+      iconColor: 'text-primary-400'
+    },
+    { 
+      name: 'Critical Issues', 
+      value: stats.criticalRiskCount?.toString() || '0', 
+      change: '+3%', 
+      positive: false,
+      icon: FaBug,
+      color: 'from-primary-500 to-primary-400',
+      bgColor: 'bg-primary-500/20 border border-primary-500/30',
+      iconColor: 'text-primary-400'
+    },
+    { 
+      name: 'Average Defect', 
+      value: (stats.averageDefectProbability?.toFixed(2) || '0') + '%', 
+      change: '+2%', 
+      positive: true,
+      icon: FaCheckCircle,
+      color: 'from-primary-500 to-primary-400',
+      bgColor: 'bg-primary-500/20 border border-primary-500/30',
+      iconColor: 'text-primary-400'
+    },
+  ] : []
+
+  const riskTrends = stats?.riskTrends || defaultRiskTrends
 
 
   return (
@@ -101,22 +129,41 @@ export default function DashboardPage() {
         {/* Welcome Section */}
         <div className="bg-gradient-to-r from-primary-500/10 via-primary-400/5 to-transparent rounded-xl p-6 border border-primary-500/20">
           <h1 className="text-2xl font-bold text-white mb-2">
-            Welcome back, {user?.full_name || user?.username || 'User'}
+            Welcome back, {user?.full_name || user?.email || 'User'}
           </h1>
           <p className="text-gray-400">Monitor and analyze software defects with AI-powered predictions</p>
         </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {defectStats.map((stat) => {
-            const Icon = stat.icon
-            return (
-              <div
-                key={stat.name}
-                className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 border border-dark-700/50 hover:border-primary-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary-500/10 group relative overflow-hidden"
-              >
-                {/* Gradient Accent */}
-                <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${stat.color} opacity-5 rounded-full blur-2xl group-hover:opacity-10 transition-opacity`}></div>
+          {loading ? (
+            // Loading skeleton
+            Array(4).fill(0).map((_, i) => (
+              <div key={i} className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 border border-dark-700/50 animate-pulse">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 bg-dark-600 rounded-xl"></div>
+                  <div className="w-16 h-6 bg-dark-600 rounded-full"></div>
+                </div>
+                <div className="h-4 bg-dark-600 rounded w-24 mb-2"></div>
+                <div className="h-8 bg-dark-600 rounded w-32"></div>
+              </div>
+            ))
+          ) : error ? (
+            // Error state
+            <div className="col-span-full bg-red-500/20 border border-red-500/50 rounded-xl p-6 text-red-400">
+              <p>{error}</p>
+            </div>
+          ) : (
+            // Loaded stats
+            defectStats.map((stat) => {
+              const Icon = stat.icon
+              return (
+                <div
+                  key={stat.name}
+                  className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 border border-dark-700/50 hover:border-primary-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary-500/10 group relative overflow-hidden"
+                >
+                  {/* Gradient Accent */}
+                  <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${stat.color} opacity-5 rounded-full blur-2xl group-hover:opacity-10 transition-opacity`}></div>
                 
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
@@ -141,11 +188,27 @@ export default function DashboardPage() {
                 </div>
               </div>
             )
-          })}
+            })
+          )}
         </div>
 
         {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {loading ? (
+            // Loading skeleton for charts
+            <>
+              <div className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 border border-dark-700/50 animate-pulse">
+                <div className="h-6 bg-dark-600 rounded w-32 mb-6"></div>
+                <div className="h-60 bg-dark-600 rounded"></div>
+              </div>
+              <div className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 border border-dark-700/50 animate-pulse">
+                <div className="h-6 bg-dark-600 rounded w-32 mb-6"></div>
+                <div className="h-60 bg-dark-600 rounded"></div>
+              </div>
+            </>
+          ) : (
+            // Loaded charts
+            <>
           {/* Risk Trends Chart */}
           <div className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 border border-dark-700/50 hover:border-primary-500/30 transition-all shadow-lg">
             <div className="flex items-center justify-between mb-6">
@@ -281,6 +344,8 @@ export default function DashboardPage() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+            </>
+          )}
         </div>
 
         {/* Recent Activity */}

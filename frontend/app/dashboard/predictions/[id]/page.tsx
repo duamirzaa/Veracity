@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/Layout/DashboardLayout'
 import ChatbotPanel from '@/components/ChatbotPanel'
-import { FaArrowLeft, FaComments } from 'react-icons/fa'
+import { FaArrowLeft, FaComments, FaSpinner } from 'react-icons/fa'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import type { Prediction } from '@/types/prediction'
+import { predictionsService } from '@/services/predictions'
 
-// Mock prediction data - in real app, this would come from API
-const mockPredictionData = {
+// Mock prediction data - fallback only
+const mockPredictionData: Prediction = {
   id: 1,
   defect_probability: 0.75,
   risk_level: 'high',
@@ -51,18 +52,32 @@ const mockPredictionData = {
     { feature_name: 'num_imports', shap_value: 0.03, feature_value: 8, impact: 'positive', abs_shap_value: 0.03 },
   ],
   metrics: {
-    loc: 450,
-    'v(g)': 12,
-    'ev(g)': 8.5,
-    'iv(g)': 6.2,
-    branchCount: 25,
-    num_functions: 15,
-    num_classes: 3,
-    num_imports: 8,
-    maintainability_index: 45,
-    lOCode: 420,
-    lOComment: 30,
-    lOBlank: 20,
+    "loc": 450,
+    'v(g)': 14,
+    'ev(g)': 9.2,
+    'iv(g)': 6.8,
+    "n": 312,
+    "v" : 1840.5,
+    "l": 0.02,
+    "d": 58.3,
+    "i": 31.5,
+    "e": 107268,
+    "b": 0.61,
+    "t": 29.8,
+    "locode": 420,
+    "locomment": 30,
+    "loblank": 0,
+    "locodeandcomment": 0,
+    "uniq_op": 0,
+    "uniq_opnd": 0,
+    "total_op": 0,
+    "total_opnd": 0,
+    "branchcount": 0,
+    "cbo": 0,
+    "rfc": 0,
+    "v_density": 0,
+    "cyclomatic_loc": 0,
+    "halstead_difficulty": 0
   },
   created_at: '2024-01-15T10:30:00Z',
 }
@@ -72,13 +87,29 @@ export default function PredictionDetailPage() {
   const router = useRouter()
   const [prediction, setPrediction] = useState(mockPredictionData)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [chatbotOpen, setChatbotOpen] = useState(false)
 
   useEffect(() => {
-    // In real app, fetch prediction by ID
-    setTimeout(() => {
-      setLoading(false)
-    }, 500)
+    const loadPrediction = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        if (typeof params.id === 'string') {
+          const pred = await predictionsService.getPredictionById(parseInt(params.id))
+          setPrediction(pred)
+        }
+      } catch (err) {
+        console.error('Failed to load prediction:', err)
+        setError('Failed to load prediction details')
+        // Keep mock data as fallback
+        setPrediction(mockPredictionData)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadPrediction()
   }, [params.id])
 
   const getRiskColor = (level: string) => {
@@ -98,8 +129,19 @@ export default function PredictionDetailPage() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-pulse text-gray-400">Loading prediction details...</div>
+        <div className="flex items-center justify-center h-64 gap-3">
+          <FaSpinner className="animate-spin text-primary-500 text-xl" />
+          <span className="text-gray-400">Loading prediction details...</span>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 text-red-400">
+          {error}
         </div>
       </DashboardLayout>
     )

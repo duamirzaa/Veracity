@@ -1,6 +1,8 @@
 import apiClient from './api'
 import type { Report } from '@/types/prediction'
 
+
+
 type ReportFormat = 'json' | 'xml' | 'pdf'
 
 /**
@@ -9,6 +11,15 @@ type ReportFormat = 'json' | 'xml' | 'pdf'
  * @param userTier - The user's subscription tier ('free' or 'pro')
  * @returns Array of allowed formats
  */
+// ADD THIS at top of file after imports
+export const mapUserRole = (role: string): string => {
+  switch(role) {
+    case 'dba': return 'admin'
+    case 'standard_user': return 'user'
+    default: return role
+  }
+}
+
 export const getAllowedReportFormats = (userRole: string, userTier: string): ReportFormat[] => {
   // Students can always generate all formats regardless of tier
   if (userRole === 'student') {
@@ -115,12 +126,12 @@ export const downloadUserProjectReport = async (
  * GET /api/report/student/:id/{format}
  * Note: Students can access all formats
  */
-export const downloadStudentReport = async (studentId: number, format: ReportFormat): Promise<Blob> => {
+export const downloadStudentReport = async (projectId: number, format: ReportFormat): Promise<Blob> => {
   try {
     if (!['json', 'xml', 'pdf'].includes(format)) {
       throw new Error(`Invalid format: ${format}`)
     }
-    const response = await apiClient.get(`/report/student/${studentId}/${format}`, {
+    const response = await apiClient.get(`/report/student/${projectId}/${format}`, {
       responseType: 'blob',
     })
     return response.data
@@ -169,10 +180,10 @@ export const downloadReport = async (
       return downloadUserProjectReport(projectId, format, userTier)
 
     case 'student':
-      if (!userId) {
-        throw new Error('userId is required for student reports')
+      if (!projectId) {
+        throw new Error('projectId is required for student reports')
       }
-      return downloadStudentReport(userId, format)
+      return downloadStudentReport(projectId, format)
 
     default:
       throw new Error(`Unknown user role: ${userRole}`)

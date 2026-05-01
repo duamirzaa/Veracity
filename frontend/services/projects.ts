@@ -1,17 +1,35 @@
 import apiClient from './api'
 
+// Backend response structure
+export interface ProjectBackendResponse {
+  project_id: number
+  user_id: number
+  project_name: string
+  project_description: string | null
+  file_size_bytes: number
+  file_encoding: string | null
+  is_archived: boolean
+  latest_prediction_id: number | null
+  analysis_count: number
+  created_at: string
+  updated_at: string
+  archived_at: string | null
+}
+
+// Frontend display structure (transformed from backend)
 export interface Project {
   id: number
+  user_id: number
   name: string
-  description: string
-  repository_url?: string
-  repository_type?: string
-  files_analyzed: number
-  last_analyzed: string
-  created_at?: string
-  updated_at?: string
+  description: string | null
+  file_size_bytes: number
+  file_encoding: string | null
   is_archived: boolean
-  archived_at?: string | null
+  latest_prediction_id: number | null
+  analysis_count: number
+  created_at: string
+  updated_at: string
+  archived_at: string | null
 }
 
 interface ProjectsListResponse {
@@ -22,28 +40,50 @@ interface ProjectsListResponse {
 }
 
 interface CreateProjectRequest {
-  name: string
-  description: string
-  repository_url?: string
-  repository_type?: string
+  project_name: string
+  project_description?: string
+  file: File
 }
 
 interface UpdateProjectRequest {
-  name?: string
-  description?: string
-  repository_url?: string
-  repository_type?: string
+  project_name?: string
+  project_description?: string
 }
 
 /**
- * Get all projects
+ * Transform backend project response to frontend format
  */
+function transformProjectFromBackend(backendProject: ProjectBackendResponse): Project {
+  return {
+    id: backendProject.project_id,
+    user_id: backendProject.user_id,
+    name: backendProject.project_name,
+    description: backendProject.project_description,
+    file_size_bytes: backendProject.file_size_bytes,
+    file_encoding: backendProject.file_encoding,
+    is_archived: backendProject.is_archived,
+    latest_prediction_id: backendProject.latest_prediction_id,
+    analysis_count: backendProject.analysis_count,
+    created_at: backendProject.created_at,
+    updated_at: backendProject.updated_at,
+    archived_at: backendProject.archived_at,
+  }
+}
+
 export const getProjects = async (page: number = 1, limit: number = 10): Promise<ProjectsListResponse> => {
   try {
-    const response = await apiClient.get<ProjectsListResponse>('/projects', {
+    const response = await apiClient.get<{ projects: ProjectBackendResponse[]; total: number; page: number; limit: number }>('/projects', {
       params: { page, limit },
     })
-    return response.data
+    console.log("FULL RESPONSE:", response.data)
+    return {
+      projects: Array.isArray(response.data)
+    ? response.data.map(transformProjectFromBackend)        // new account → []
+    : (response.data.projects ?? []).map(transformProjectFromBackend), // has projects → {}
+  total: Array.isArray(response.data) ? response.data.length : response.data.total ?? 0,
+  page: Array.isArray(response.data) ? 1 : response.data.page ?? 1,
+  limit: Array.isArray(response.data) ? 10 : response.data.limit ?? 10,
+    }
   } catch (error) {
     throw error
   }
@@ -54,20 +94,27 @@ export const getProjects = async (page: number = 1, limit: number = 10): Promise
  */
 export const getProjectById = async (id: number): Promise<Project> => {
   try {
-    const response = await apiClient.get<Project>(`/projects/${id}`)
-    return response.data
+    const response = await apiClient.get<ProjectBackendResponse>(`/projects/${id}`)
+    return transformProjectFromBackend(response.data)
   } catch (error) {
     throw error
   }
 }
 
 /**
- * Create new project
+ * Create new project by uploading a .py file
  */
 export const createProject = async (payload: CreateProjectRequest): Promise<Project> => {
   try {
-    const response = await apiClient.post<Project>('/projects', payload)
-    return response.data
+    const formData = new FormData()
+    formData.append('project_name', payload.project_name)
+    formData.append('project_description', payload.project_description || '')
+    formData.append('file', payload.file)
+
+    const response = await apiClient.post<{ project: ProjectBackendResponse }>('/projects', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return transformProjectFromBackend(response.data.project)
   } catch (error) {
     throw error
   }
@@ -78,8 +125,8 @@ export const createProject = async (payload: CreateProjectRequest): Promise<Proj
  */
 export const updateProject = async (id: number, payload: UpdateProjectRequest): Promise<Project> => {
   try {
-    const response = await apiClient.put<Project>(`/projects/${id}`, payload)
-    return response.data
+    const response = await apiClient.put<{ project: ProjectBackendResponse }>(`/projects/${id}`, payload)
+    return transformProjectFromBackend(response.data.project)
   } catch (error) {
     throw error
   }
@@ -91,8 +138,8 @@ export const updateProject = async (id: number, payload: UpdateProjectRequest): 
  */
 export const getProjectsReportAll = async (): Promise<Project[]> => {
   try {
-    const response = await apiClient.get<Project[]>('/projects/report/all')
-    return response.data
+    const response = await apiClient.get<ProjectBackendResponse[]>('/projects/report/all')
+    return response.data.map(transformProjectFromBackend)
   } catch (error) {
     throw error
   }
@@ -130,8 +177,8 @@ export const getProjectReport = async (id: number): Promise<any> => {
  */
 export const archiveProject = async (id: number): Promise<Project> => {
   try {
-    const response = await apiClient.patch<Project>(`/projects/${id}/archive`)
-    return response.data
+    const response = await apiClient.patch<{ project: ProjectBackendResponse }>(`/projects/${id}/archive`)
+    return transformProjectFromBackend(response.data.project)
   } catch (error) {
     throw error
   }
@@ -143,8 +190,8 @@ export const archiveProject = async (id: number): Promise<Project> => {
  */
 export const unarchiveProject = async (id: number): Promise<Project> => {
   try {
-    const response = await apiClient.patch<Project>(`/projects/${id}/unarchive`)
-    return response.data
+    const response = await apiClient.patch<{ project: ProjectBackendResponse }>(`/projects/${id}/unarchive`)
+    return transformProjectFromBackend(response.data.project)
   } catch (error) {
     throw error
   }
@@ -155,7 +202,19 @@ export const unarchiveProject = async (id: number): Promise<Project> => {
  */
 export const archiveProjectOld = async (id: number): Promise<Project> => {
   try {
-    const response = await apiClient.delete(`/projects/${id}`)
+    const response = await apiClient.delete<ProjectBackendResponse>(`/projects/${id}`)
+    return transformProjectFromBackend(response.data)
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Generate a role-based report for a project from backend
+ */
+export const generateProjectReport = async (projectId: number) => {
+  try {
+    const response = await apiClient.get(`/projects/${projectId}/report`)
     return response.data
   } catch (error) {
     throw error

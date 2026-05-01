@@ -1,67 +1,61 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import DashboardLayout from '@/components/Layout/DashboardLayout'
 import ChatbotPanel from '@/components/ChatbotPanel'
-import { FaUpload, FaGithub, FaCode, FaExclamationTriangle, FaCheckCircle, FaFile, FaComments } from 'react-icons/fa'
+import { FaUpload, FaGithub, FaCode, FaExclamationTriangle, FaCheckCircle, FaFile, FaComments, FaSpinner } from 'react-icons/fa'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import type { Prediction } from '@/types/prediction'
-
-// Mock prediction data
-const mockPrediction: Prediction = {
-  id: 1,
-  defect_probability: 0.75,
-  risk_level: 'high',
-  top_risk_features: [
-    { feature_name: 'v(g)', shap_value: 0.15, feature_value: 12, impact: 'positive' },
-    { feature_name: 'loc', shap_value: 0.12, feature_value: 450, impact: 'positive' },
-    { feature_name: 'branchCount', shap_value: 0.10, feature_value: 25, impact: 'positive' },
-    { feature_name: 'num_functions', shap_value: 0.08, feature_value: 15, impact: 'positive' },
-    { feature_name: 'maintainability_index', shap_value: -0.05, feature_value: 45, impact: 'negative' },
-  ],
-  code_snippet: `def process_payment(user_id, amount, currency):
-    """Process payment for user"""
-    # High complexity function with multiple branches
-    if amount <= 0:
-        raise ValueError("Amount must be positive")
-    
-    if currency not in ['USD', 'EUR', 'GBP']:
-        raise ValueError("Unsupported currency")
-    
-    user = get_user(user_id)
-    if not user:
-        raise ValueError("User not found")
-    
-    balance = get_balance(user_id)
-    if balance < amount:
-        raise ValueError("Insufficient funds")
-    
-    # Complex nested logic
-    for transaction in get_recent_transactions(user_id):
-        if transaction.status == 'pending':
-            if transaction.amount > amount:
-                process_refund(transaction.id)
-            else:
-                update_transaction(transaction.id, 'completed')
-    
-    return create_transaction(user_id, amount, currency)`,
-  file_path: 'payment_processor.py',
-}
+import * as predictionsService from '@/services/predictions'
+import * as projectsService from '@/services/projects'
 
 export default function AnalysisPage() {
+  const searchParams = useSearchParams()
+  const projectId = searchParams.get('projectId')
+  
   const [code, setCode] = useState('')
+  const [filePath, setFilePath] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
   const [prediction, setPrediction] = useState<Prediction | null>(null)
   const [activeTab, setActiveTab] = useState<'input' | 'results'>('input')
   const [analysisProgress, setAnalysisProgress] = useState(0)
   const [currentStep, setCurrentStep] = useState('')
   const [chatbotOpen, setChatbotOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Load project data if projectId is provided
+  useEffect(() => {
+    const loadProjectData = async () => {
+      if (!projectId) return
+
+      try {
+        setLoading(true)
+        setError(null)
+        const project = await projectsService.getProjectById(parseInt(projectId))
+        if (project.latest_prediction_id) {
+          const pred = await predictionsService.getPredictionById(project.latest_prediction_id)
+          setPrediction(pred)
+          setActiveTab('results')
+        }
+      } catch (err) {
+        console.error('Failed to load project data:', err)
+        setError('Failed to load project data')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadProjectData()
+  }, [projectId])
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file && (file.type === 'text/x-python' || file.name.endsWith('.py'))) {
+      setFilePath(file.name)
       const reader = new FileReader()
       reader.onload = (event) => {
         const content = event.target?.result as string
@@ -69,16 +63,20 @@ export default function AnalysisPage() {
       }
       reader.readAsText(file)
     } else {
-      // Invalid file type
+      setError('Please select a valid Python file')
     }
   }
 
   const handleAnalyze = async () => {
-    if (!code.trim()) return
+    if (!code.trim()) {
+      setError('Please provide code to analyze')
+      return
+    }
 
     setAnalyzing(true)
     setAnalysisProgress(0)
     setCurrentStep('Initializing analysis...')
+    setError(null)
 
     // Simulate real-time analysis progress
     const steps = [
@@ -90,23 +88,31 @@ export default function AnalysisPage() {
       { progress: 100, step: 'Analysis complete!' },
     ]
 
-    for (const { progress, step } of steps) {
-      await new Promise((resolve) => setTimeout(resolve, 300))
-      setAnalysisProgress(progress)
-      setCurrentStep(step)
-    }
+    try {
+      for (const { progress, step } of steps) {
+        await new Promise((resolve) => setTimeout(resolve, 300))
+        setAnalysisProgress(progress)
+        setCurrentStep(step)
+      }
 
-    // Final result
-    setTimeout(() => {
-      setPrediction({
-        ...mockPrediction,
-        code_snippet: code,
+      // Submit to backend
+      const result = await predictionsService.analyzeCode({
+        code,
+        file_path: filePath || 'analysis.py',
+        project_id: projectId ? parseInt(projectId) : undefined,
       })
+
+      setPrediction(result.prediction)
+      setActiveTab('results')
+    } catch (err) {
+      console.error('Analysis failed:', err)
+      setError('Analysis failed. Please try again.')
+      setPrediction(null)
+    } finally {
       setAnalyzing(false)
       setAnalysisProgress(0)
       setCurrentStep('')
-      setActiveTab('results')
-    }, 500)
+    }
   }
 
   const getRiskColor = (level: string) => {
@@ -155,6 +161,20 @@ export default function AnalysisPage() {
             </button>
           )}
         </div>
+
+        {/* Error and Loading States */}
+        {error && (
+          <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4 text-red-400">
+            <p>{error}</p>
+          </div>
+        )}
+
+        {loading && (
+          <div className="bg-blue-500/20 border border-blue-500/50 rounded-xl p-4 text-blue-400 flex items-center gap-2">
+            <FaSpinner className="animate-spin" />
+            <p>Loading project data...</p>
+          </div>
+        )}
 
         {activeTab === 'input' ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

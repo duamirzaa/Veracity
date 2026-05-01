@@ -10,7 +10,6 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'profile' | 'subscription' | 'notifications' | 'security'>('profile')
   const [formData, setFormData] = useState({
     full_name: user?.full_name || '',
-    username: user?.username || '',
     email: user?.email || '',
   })
 
@@ -33,7 +32,7 @@ export default function SettingsPage() {
         'JSON/XML reports',
         'Community support',
       ],
-      current: !user?.is_pro,
+      current: user?.tier === 'free',
     },
     {
       name: 'Pro',
@@ -48,7 +47,7 @@ export default function SettingsPage() {
         'SHAP explainability',
         'Chatbot support',
       ],
-      current: user?.is_pro,
+      current: user?.tier === 'pro',
       popular: true,
     },
     {
@@ -139,16 +138,6 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Username</label>
-                <input
-                  type="text"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
-              <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
                 <input
                   type="email"
@@ -176,9 +165,9 @@ export default function SettingsPage() {
             <div className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 border border-dark-700/50">
               <h2 className="text-xl font-semibold text-white mb-2">Current Plan</h2>
               <p className="text-gray-400 mb-6">
-                {user?.is_pro ? 'You are currently on the Pro plan' : 'You are currently on the Free plan'}
+                {user?.tier === 'pro' ? 'You are currently on the Pro plan' : 'You are currently on the Free plan'}
               </p>
-              {user?.is_pro && (
+              {user?.tier === 'pro' && (
                 <div className="bg-primary-500/10 border border-primary-500/30 rounded-lg p-4">
                   <p className="text-primary-400 font-semibold">Pro Plan Active</p>
                   <p className="text-sm text-gray-400 mt-1">Your subscription renews on January 30, 2024</p>

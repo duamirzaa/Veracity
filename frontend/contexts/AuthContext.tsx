@@ -10,21 +10,23 @@ export type UserTier = 'free' | 'pro'
 export interface User {
   id: number
   email: string
-  username: string
   full_name: string | null
   role: UserRole
   tier: UserTier
   is_active: boolean
+  is_email_verified: boolean
+  last_login_at: string | null
 }
 
 interface AuthContextType {
   user: User | null
   token: string | null
   login: (email: string, password: string) => Promise<void>
-  register: (email: string, username: string, password: string, full_name?: string) => Promise<void>
+  register: (email: string, password: string, full_name?: string) => Promise<void>
   logout: () => void
   isAuthenticated: boolean
   loading: boolean
+  error: string | null
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -33,6 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     // Check for stored auth on mount
@@ -54,32 +57,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       setLoading(true)
+      setError(null)
       const response = await authService.login({ email, password })
       setUser(response.user)
       setToken(response.token)
       Cookies.set('auth_token', response.token, { expires: 7 })
       Cookies.set('auth_user', JSON.stringify(response.user), { expires: 7 })
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Login failed'
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Login failed'
+      setError(errorMessage)
       throw new Error(errorMessage)
     } finally {
       setLoading(false)
     }
   }
 
-  const register = async (email: string, username: string, password: string, full_name?: string) => {
+  const register = async (email: string, password: string, full_name?: string) => {
     try {
       setLoading(true)
-      const response = await authService.register({
+      setError(null)
+      await authService.register({
         email,
-        username,
         password,
         full_name,
       })
-      // Note: Register does not return token - user must login after registration
-      // Just show success message or redirect to login
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Registration failed'
+      // Registration successful - user must login after
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Registration failed'
+      setError(errorMessage)
       throw new Error(errorMessage)
     } finally {
       setLoading(false)
@@ -89,6 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     setUser(null)
     setToken(null)
+    setError(null)
     Cookies.remove('auth_token')
     Cookies.remove('auth_user')
   }
@@ -103,6 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         isAuthenticated: !!user,
         loading,
+        error,
       }}
     >
       {children}

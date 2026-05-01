@@ -12,7 +12,7 @@ export default function AdminPage() {
 
   // Redirect to Analysis Dashboard by default
   useEffect(() => {
-    if (isAuthenticated && user && user.role === 'dba') {
+    if (isAuthenticated && user && user.role === 'admin') {
       router.push('/dashboard/admin/dashboard')
     }
   }, [router, isAuthenticated, user])
@@ -29,7 +29,7 @@ export default function AdminPage() {
   }
 
   // Only DBA can access
-  if (user.role !== 'dba') {
+  if (user.role !== 'admin') {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-full">

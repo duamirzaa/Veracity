@@ -6,6 +6,36 @@ export interface RiskFeature {
   abs_shap_value?: number
 }
 
+export interface Metrics {
+  loc: number
+  'v(g)': number
+  'ev(g)': number
+  'iv(g)': number
+  n: number
+  v: number
+  l: number
+  d: number
+  i: number
+  e: number
+  b: number
+  t: number
+  locode: number
+  locomment: number
+  loblank: number
+  locodeandcomment: number
+  uniq_op: number
+  uniq_opnd: number
+  total_op: number
+  total_opnd: number
+  branchcount: number
+  cbo: number
+  rfc: number
+  v_density: number
+  cyclomatic_loc: number
+  halstead_difficulty: number
+  [key: string]: number // For dynamic metric access
+}
+
 export interface Prediction {
   id: number
   defect_probability: number
@@ -13,27 +43,16 @@ export interface Prediction {
   top_risk_features: RiskFeature[]
   code_snippet: string
   file_path: string
-  metrics?: {
-    loc: number
-    'v(g)': number
-    'ev(g)': number
-    'iv(g)': number
-    branchCount: number
-    num_functions: number
-    num_classes: number
-    num_imports: number
-    maintainability_index: number
-    lOCode: number
-    lOComment: number
-    lOBlank: number
-  }
-  created_at?: string
+  metrics: Metrics
+  created_at: string
 }
 
+// CORRECT - title is a string ✅
 export interface Report {
-  id: number
-  title: string
-  report_type: 'daily' | 'monthly' | 'custom'
+  title: string        // ← just this change
+  report_type: string
   report_format: 'json' | 'xml' | 'pdf'
-  created_at: string
+  generated_at: string
+  created_at?: string
+  id?: number
 }

@@ -1,8 +1,9 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import DashboardLayout from '@/components/Layout/DashboardLayout'
 import { useAuth } from '@/contexts/AuthContext'
-import { FaShieldAlt } from 'react-icons/fa'
+import { FaShieldAlt, FaSpinner } from 'react-icons/fa'
 import {
   LineChart,
   Line,
@@ -16,9 +17,11 @@ import {
   Pie,
   Cell,
 } from 'recharts'
+import { getAdminDashboard } from '@/services/admin'
+import type { DashboardStats } from '@/services/admin'
 
-// Mock data
-const analysisDashboard = {
+// Mock data - fallback
+const mockAnalysisDashboard: DashboardStats = {
   avgRisk: 0.65,
   totalScans: 12450,
   successfulScans: 11800,
@@ -41,20 +44,47 @@ const analysisDashboard = {
 
 export default function AnalysisDashboardPage() {
   const { user, isAuthenticated } = useAuth()
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [analysisDashboard, setAnalysisDashboard] = useState<DashboardStats>(mockAnalysisDashboard)
+
+  // Load admin dashboard data on mount
+  useEffect(() => {
+    const loadDashboard = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await getAdminDashboard()
+        setAnalysisDashboard(data)
+      } catch (err) {
+        console.error('Failed to load admin dashboard:', err)
+        setError('Failed to load dashboard data')
+        // Keep mock data as fallback
+        setAnalysisDashboard(mockAnalysisDashboard)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (isAuthenticated && user?.role === 'admin') {
+      loadDashboard()
+    }
+  }, [isAuthenticated, user])
 
   // Wait for auth to load
   if (!isAuthenticated || !user) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-full">
-          <div className="animate-pulse text-gray-400">Loading...</div>
+        <div className="flex items-center justify-center h-full gap-3">
+          <FaSpinner className="animate-spin text-primary-500" />
+          <span className="text-gray-400">Loading...</span>
         </div>
       </DashboardLayout>
     )
   }
 
   // Only DBA can access
-  if (user.role !== 'dba') {
+  if (user.role !== 'admin') {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-full">
@@ -75,6 +105,21 @@ export default function AnalysisDashboardPage() {
           <h1 className="text-2xl font-bold text-white">Analysis Dashboard</h1>
           <p className="text-gray-400 mt-1">Big picture overview of system-wide analysis metrics</p>
         </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 text-red-400">
+            {error}
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <div className="bg-blue-500/20 border border-blue-500/50 rounded-lg p-4 text-blue-400 flex items-center gap-2">
+            <FaSpinner className="animate-spin" />
+            <p>Loading dashboard data...</p>
+          </div>
+        )}
 
         {/* Big Picture Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
