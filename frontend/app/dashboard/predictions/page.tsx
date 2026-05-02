@@ -25,7 +25,7 @@ export default function PredictionsPage() {
         const data = await getPredictions(page, limit)
         setPredictions(data.predictions || [])
         setTotal(data.total || 0)
-        setTotalPages(data.pages || Math.ceil((data.total || 0) / limit))
+        setTotalPages(data.page || Math.ceil((data.total || 0) / limit))
       } catch (err) {
         console.error('Failed to fetch predictions:', err)
         setError('Failed to load predictions')
