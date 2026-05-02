@@ -1,6 +1,6 @@
 declare const process: any;
-
-import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios'
+import axios, { InternalAxiosRequestConfig } from 'axios';
+import { AxiosInstance, AxiosError } from 'axios';
 import Cookies from 'js-cookie'
 
 // Backend API base URL - changed from port 8000 to 5000 to match backend
@@ -17,7 +17,7 @@ const apiClient: AxiosInstance = axios.create({
 
 // Request interceptor - Add auth token to headers
 apiClient.interceptors.request.use(
-  (config: AxiosRequestConfig) => {
+  (config: InternalAxiosRequestConfig) => {
     const token = Cookies.get('auth_token');
     if (token) {
       if (config.headers) {
