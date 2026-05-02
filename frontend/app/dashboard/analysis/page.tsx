@@ -1,6 +1,5 @@
 'use client'
-
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import DashboardLayout from '@/components/Layout/DashboardLayout'
 import ChatbotPanel from '@/components/ChatbotPanel'
@@ -11,7 +10,7 @@ import type { Prediction } from '@/types/prediction'
 import * as predictionsService from '@/services/predictions'
 import * as projectsService from '@/services/projects'
 
-export default function AnalysisPage() {
+function AnalysisContent() {
   const searchParams = useSearchParams()
   const projectId = searchParams.get('projectId')
   
@@ -419,5 +418,12 @@ export default function AnalysisPage() {
         predictionId={prediction?.id}
       />
     </DashboardLayout>
+  )
+}
+export default function AnalysisPage() {
+  return (
+    <Suspense fallback={<div className="text-white p-8">Loading...</div>}>
+      <AnalysisContent />
+    </Suspense>
   )
 }
