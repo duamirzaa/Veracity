@@ -104,9 +104,22 @@ export default function AnalysisPage() {
 
       setPrediction(result.prediction)
       setActiveTab('results')
-    } catch (err) {
+    } catch (err: any) {
       console.error('Analysis failed:', err)
-      setError('Analysis failed. Please try again.')
+      const errorMsg = err?.response?.data?.error || 'Analysis failed. Please try again.'
+      const errorCode = err?.response?.data?.code
+      
+      if (errorCode === 'TIER_LIMIT_EXCEEDED') {
+        setError('Monthly limit reached (10 analyses). Upgrade to Pro for unlimited analyses.')
+      } else if (errorCode === 'ML_UNAVAILABLE') {
+        setError('ML service is currently offline. Please try again later.')
+      } else if (errorCode === 'ML_TIMEOUT') {
+        setError('Analysis timed out. Please try a smaller file.')
+      } else if (errorCode === 'RATE_LIMITED') {
+        setError('Rate limit hit. Please wait a moment before trying again.')
+      } else {
+        setError(errorMsg)
+      }
       setPrediction(null)
     } finally {
       setAnalyzing(false)
@@ -138,16 +151,18 @@ export default function AnalysisPage() {
 
         {/* Tabs */}
         <div className="flex gap-4 border-b border-dark-700">
-          <button
-            onClick={() => setActiveTab('input')}
-            className={`px-4 py-2 font-medium transition-colors ${
-              activeTab === 'input'
-                ? 'text-primary-500 border-b-2 border-primary-500'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            Code Input
-          </button>
+          {!prediction && (
+            <button
+              onClick={() => setActiveTab('input')}
+              className={`px-4 py-2 font-medium transition-colors ${
+                activeTab === 'input'
+                  ? 'text-primary-500 border-b-2 border-primary-500'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Code Input
+            </button>
+          )}
           {prediction && (
             <button
               onClick={() => setActiveTab('results')}

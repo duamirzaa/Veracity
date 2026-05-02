@@ -57,3 +57,16 @@ export const verifyToken = async (): Promise<User> => {
     throw error
   }
 }
+
+/**
+ * Update own profile (full_name and/or password)
+ * PUT /auth/me
+ */
+export const updateProfile = async (data: { full_name?: string; password?: string }): Promise<User> => {
+  try {
+    const response = await apiClient.put<User>('/auth/me', data)
+    return response.data
+  } catch (error) {
+    throw error
+  }
+}

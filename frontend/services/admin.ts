@@ -19,23 +19,42 @@ export interface DashboardStats {
   }>
 }
 
-export interface UserWithAccess extends User {
-  name?: string
-  projects: string[]
-  access: 'read' | 'write' | 'admin'
+export interface AdminUser {
+  user_id: number
+  email: string
+  full_name: string | null
+  role: 'user' | 'project_manager' | 'admin' | 'student'
+  tier: 'free' | 'pro'
+  is_active: boolean
+  is_email_verified: boolean
+  created_at: string
+  last_login_at: string | null
+}
+
+export interface AdminProject {
+  project_id: number
+  project_name: string
+  is_archived: boolean
+  analysis_count: number
+  created_at: string
+  user_id: number
+  email: string
+  full_name: string | null
+  user_role: string
 }
 
 export interface ScanLog {
   id: number
-  project_id: number
-  project_name: string
   user_id: number
   user_name: string
-  status: 'success' | 'failed' | 'in_progress'
-  files_scanned: number
-  predictions_generated: number
+  role: string
+  action: string
+  resource_type: string
+  project_id?: number
+  status: 'SUCCESS' | 'FAILED' | 'in_progress'
+  ip_address: string
+  error_message?: string | null
   timestamp: string
-  error_message?: string
 }
 
 export interface MetricConfig {
@@ -47,14 +66,14 @@ export interface MetricConfig {
 }
 
 interface UsersListResponse {
-  users: UserWithAccess[]
+  users: AdminUser[]
   total: number
   page: number
   limit: number
 }
 
 interface ProjectsListResponse {
-  projects: Project[]
+  projects: AdminProject[]
   total: number
   page: number
   limit: number
@@ -88,10 +107,19 @@ export const getAdminDashboard = async (): Promise<DashboardStats> => {
  */
 export const getUsers = async (page: number = 1, limit: number = 10): Promise<UsersListResponse> => {
   try {
-    const response = await apiClient.get<UsersListResponse>('/admin/users', {
+    const response = await apiClient.get<AdminUser[]>('/admin/users', {
       params: { page, limit },
     })
-    return response.data
+
+    // The backend returns an array, not a paginated object
+    const usersArray = Array.isArray(response.data) ? response.data : []
+
+    return {
+      users: usersArray,
+      total: usersArray.length,
+      page: 1,
+      limit: usersArray.length,
+    }
   } catch (error) {
     throw error
   }
@@ -100,9 +128,9 @@ export const getUsers = async (page: number = 1, limit: number = 10): Promise<Us
 /**
  * Get single user details
  */
-export const getUserById = async (id: number): Promise<UserWithAccess> => {
+export const getUserById = async (id: number): Promise<AdminUser> => {
   try {
-    const response = await apiClient.get<UserWithAccess>(`/admin/users/${id}`)
+    const response = await apiClient.get<AdminUser>(`/admin/users/${id}`)
     return response.data
   } catch (error) {
     throw error
@@ -112,9 +140,9 @@ export const getUserById = async (id: number): Promise<UserWithAccess> => {
 /**
  * Update user
  */
-export const updateUser = async (id: number, payload: Partial<UserWithAccess>): Promise<UserWithAccess> => {
+export const updateUser = async (id: number, payload: Partial<AdminUser>): Promise<AdminUser> => {
   try {
-    const response = await apiClient.put<UserWithAccess>(`/admin/users/${id}`, payload)
+    const response = await apiClient.put<AdminUser>(`/admin/users/${id}`, payload)
     return response.data
   } catch (error) {
     throw error
@@ -213,11 +241,45 @@ export const getAnalytics = async (): Promise<DashboardStats> => {
  * Toggle user status (activate/deactivate)
  * PATCH /admin/users/:id/toggle
  */
-export const toggleUserStatus = async (userId: number): Promise<UserWithAccess> => {
+export const toggleUserStatus = async (userId: number): Promise<AdminUser> => {
   try {
-    const response = await apiClient.patch<UserWithAccess>(`/admin/users/${userId}/toggle`)
+    const response = await apiClient.patch<AdminUser>(`/admin/users/${userId}/toggle`)
     return response.data
   } catch (error) {
     throw error
   }
 }
+
+/**
+ * Get audit logs
+ */
+export const getLogs = async (page: number = 1, limit: number = 10): Promise<LogsListResponse> => {
+  try {
+    const response = await apiClient.get<LogsListResponse>('/admin/logs', {
+      params: { page, limit },
+    })
+
+    // The backend returns a paginated object per the contract
+    return {
+      logs: response.data.logs || [],
+      total: response.data.total || 0,
+      page: response.data.page || page,
+      limit: response.data.limit || limit,
+    }
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Update user role
+ * PATCH /admin/users/:id/role
+ */
+export const updateUserRole = async (userId: number, role: string): Promise<void> => {
+  try {
+    await apiClient.patch(`/admin/users/${userId}/role`, { role })
+  } catch (error) {
+    throw error
+  }
+}
+

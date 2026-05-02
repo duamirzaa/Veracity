@@ -6,6 +6,7 @@ import DashboardLayout from '@/components/Layout/DashboardLayout'
 import { FaPlus, FaGithub, FaFolder, FaTrash, FaEdit, FaCode, FaSpinner } from 'react-icons/fa'
 import * as projectsService from '@/services/projects'
 import type { Project } from '@/services/projects'
+import { addNotification } from '@/services/notifications'
 
 
 export default function ProjectsPage() {
@@ -20,6 +21,13 @@ export default function ProjectsPage() {
     project_description: '',
   })
   const [fileInput, setFileInput] = useState<File | null>(null)
+  
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingProject, setEditingProject] = useState<Project | null>(null)
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    description: '',
+  })
 
   // Fetch projects on mount
   useEffect(() => {
@@ -72,6 +80,7 @@ export default function ProjectsPage() {
       setFormData({ project_name: '', project_description: '' })
       setFileInput(null)
       setShowModal(false)
+      addNotification(`Project created: ${newProject.name}. Initial analysis triggered.`)
     } catch (err) {
       console.error('Failed to create project:', err)
       setError('Failed to create project')
@@ -94,6 +103,42 @@ export default function ProjectsPage() {
 
   const handleAnalyze = (projectId: number) => {
     router.push(`/dashboard/analysis?projectId=${projectId}`)
+  }
+
+  const handleEditClick = (project: Project) => {
+    setEditingProject(project)
+    setEditFormData({
+      name: project.name,
+      description: project.description || '',
+    })
+    setShowEditModal(true)
+  }
+
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setEditFormData({ ...editFormData, [e.target.name]: e.target.value })
+  }
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingProject) return
+
+    try {
+      setSubmitting(true)
+      setError(null)
+      const updated = await projectsService.updateProject(editingProject.id, {
+        project_name: editFormData.name,
+        project_description: editFormData.description,
+      })
+      
+      setProjects(projects.map(p => p.id === updated.id ? updated : p))
+      setShowEditModal(false)
+      addNotification(`Project updated: ${updated.name}`)
+    } catch (err) {
+      console.error('Failed to update project:', err)
+      setError('Failed to update project')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -162,7 +207,10 @@ export default function ProjectsPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="text-gray-400 hover:text-white p-2">
+                  <button 
+                    onClick={() => handleEditClick(project)}
+                    className="text-gray-400 hover:text-white p-2"
+                  >
                     <FaEdit />
                   </button>
                   <button
@@ -251,6 +299,53 @@ export default function ProjectsPage() {
                     className="flex-1 bg-primary-500 hover:bg-primary-600 text-white py-2 rounded-lg transition-colors"
                   >
                     Create
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+        {/* Edit Project Modal */}
+        {showEditModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-dark-800 rounded-lg p-6 w-full max-w-md border border-dark-700">
+              <h2 className="text-xl font-semibold text-white mb-4">Edit Project</h2>
+              <form onSubmit={handleEditSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Project Name</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={editFormData.name}
+                    onChange={handleEditChange}
+                    required
+                    className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Description</label>
+                  <textarea
+                    name="description"
+                    value={editFormData.description}
+                    onChange={handleEditChange}
+                    className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    rows={3}
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditModal(false)}
+                    className="flex-1 bg-dark-700 hover:bg-dark-600 text-white py-2 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="flex-1 bg-primary-500 hover:bg-primary-600 text-white py-2 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {submitting ? 'Saving...' : 'Save Changes'}
                   </button>
                 </div>
               </form>

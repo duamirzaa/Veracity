@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import DashboardLayout from '@/components/Layout/DashboardLayout'
 import Link from 'next/link'
-import { FaChartLine, FaExclamationTriangle, FaCheckCircle, FaClock, FaBug, FaShieldAlt, FaChartBar, FaTasks, FaSpinner } from 'react-icons/fa'
+import { FaChartLine, FaExclamationTriangle, FaCheckCircle, FaClock, FaBug, FaShieldAlt, FaChartBar, FaTasks, FaSpinner, FaInbox } from 'react-icons/fa'
 import {
   LineChart,
   Line,
@@ -19,25 +19,21 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import * as dashboardService from '@/services/dashboard'
+import { getPredictions } from '@/services/predictions'
 
 export default function DashboardPage() {
-  const { isAuthenticated, user } = useAuth()
+  const { isAuthenticated, user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [stats, setStats] = useState<any>(null)
-
-  // Default mock data for fallback
-  const defaultRiskTrends = [
-    { date: 'Jan', low: 45, medium: 30, high: 15, critical: 10 },
-    { date: 'Feb', low: 50, medium: 25, high: 15, critical: 10 },
-    { date: 'Mar', low: 48, medium: 28, high: 14, critical: 10 },
-    { date: 'Apr', low: 52, medium: 26, high: 12, critical: 10 },
-    { date: 'May', low: 55, medium: 24, high: 11, critical: 10 },
-    { date: 'Jun', low: 58, medium: 22, high: 10, critical: 10 },
-  ]
+  const [recentPredictions, setRecentPredictions] = useState<any[]>([])
+  const [predictionsLoading, setPredictionsLoading] = useState(true)
 
   useEffect(() => {
+    // Wait for auth to finish loading before making any redirect decisions
+    if (authLoading) return
+
     if (!isAuthenticated) {
       router.push('/auth/login')
       return
@@ -46,7 +42,7 @@ export default function DashboardPage() {
     if (user?.role === 'admin') {
       router.push('/dashboard/admin/dashboard')
     }
-  }, [isAuthenticated, user, router])
+  }, [isAuthenticated, user, router, authLoading])
 
   // Fetch dashboard stats on mount
   useEffect(() => {
@@ -66,7 +62,22 @@ export default function DashboardPage() {
       }
     }
 
+    const fetchRecentPredictions = async () => {
+      if (!isAuthenticated) return
+      try {
+        setPredictionsLoading(true)
+        const data = await getPredictions(1, 5)
+        setRecentPredictions(data.predictions || [])
+      } catch (err) {
+        console.error('Failed to fetch recent predictions:', err)
+        setRecentPredictions([])
+      } finally {
+        setPredictionsLoading(false)
+      }
+    }
+
     fetchStats()
+    fetchRecentPredictions()
   }, [isAuthenticated])
 
   if (!isAuthenticated) return null
@@ -120,7 +131,7 @@ export default function DashboardPage() {
     },
   ] : []
 
-  const riskTrends = stats?.riskTrends || defaultRiskTrends
+  const riskTrends = stats?.riskTrends || []
 
 
   return (
@@ -348,57 +359,81 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Recent Activity */}
+        {/* Recent Predictions */}
         <div className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 border border-dark-700/50 shadow-lg">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-semibold text-white">Recent Predictions</h3>
-            <button className="text-sm text-primary-400 hover:text-primary-300 font-medium">
+            <Link href="/dashboard/predictions" className="text-sm text-primary-400 hover:text-primary-300 font-medium">
               View All →
-            </button>
+            </Link>
           </div>
           <div className="space-y-3">
-            {[
-              { id: 1, name: 'payment_processor.py', risk: 'High', prob: 75, time: '2 hours ago', color: 'orange' },
-              { id: 2, name: 'api_gateway.py', risk: 'Medium', prob: 45, time: '5 hours ago', color: 'yellow' },
-              { id: 3, name: 'data_analytics.py', risk: 'Critical', prob: 92, time: '1 day ago', color: 'red' },
-              { id: 4, name: 'auth_service.py', risk: 'Low', prob: 25, time: '2 days ago', color: 'green' },
-              { id: 5, name: 'user_controller.py', risk: 'High', prob: 68, time: '3 days ago', color: 'orange' },
-            ].map((item) => {
-              const riskColors: Record<string, { bg: string; text: string; border: string }> = {
-                low: { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/30' },
-                medium: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/30' },
-                high: { bg: 'bg-orange-500/20', text: 'text-orange-400', border: 'border-orange-500/30' },
-                critical: { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30' },
-              }
-              const colors = riskColors[item.risk.toLowerCase()] || riskColors.medium
-              
-              return (
-                <Link
-                  key={item.id}
-                  href={`/dashboard/predictions/${item.id}`}
-                  className="flex items-center justify-between p-4 bg-dark-700/50 rounded-xl hover:bg-dark-700 border border-dark-600/50 hover:border-primary-500/30 transition-all group cursor-pointer"
-                >
+            {predictionsLoading ? (
+              Array(3).fill(0).map((_, i) => (
+                <div key={i} className="flex items-center justify-between p-4 bg-dark-700/50 rounded-xl border border-dark-600/50 animate-pulse">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-primary-500/20 border border-primary-500/30 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <FaChartLine className="text-primary-400" />
-                    </div>
+                    <div className="w-12 h-12 bg-dark-600 rounded-xl"></div>
                     <div>
-                      <p className="text-white font-semibold">{item.name}</p>
-                      <p className="text-sm text-gray-400">{item.time}</p>
+                      <div className="h-4 bg-dark-600 rounded w-40 mb-2"></div>
+                      <div className="h-3 bg-dark-600 rounded w-24"></div>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className={`px-3 py-1.5 ${colors.bg} ${colors.text} text-xs font-semibold rounded-full border ${colors.border}`}>
-                      {item.risk} Risk
-                    </span>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-white">{item.prob}%</p>
-                      <p className="text-xs text-gray-500">probability</p>
-                    </div>
+                    <div className="h-6 bg-dark-600 rounded-full w-20"></div>
+                    <div className="h-4 bg-dark-600 rounded w-12"></div>
                   </div>
-                </Link>
-              )
-            })}
+                </div>
+              ))
+            ) : recentPredictions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <FaInbox className="text-4xl text-dark-600 mb-3" />
+                <p className="text-gray-400 text-lg">No predictions yet</p>
+                <p className="text-gray-500 text-sm mt-1">Upload a project and run an analysis to see predictions here</p>
+              </div>
+            ) : (
+              recentPredictions.map((item) => {
+                const riskLevel = (item.risk_level || 'medium').toLowerCase()
+                const prob = Math.round((item.defect_probability ?? item.risk_score ?? 0) * 100)
+                const riskColors: Record<string, { bg: string; text: string; border: string }> = {
+                  low: { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/30' },
+                  medium: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/30' },
+                  high: { bg: 'bg-orange-500/20', text: 'text-orange-400', border: 'border-orange-500/30' },
+                  critical: { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30' },
+                }
+                const colors = riskColors[riskLevel] || riskColors.medium
+                const predId = item.id || item.prediction_id
+                const timeAgo = item.created_at
+                  ? new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                  : ''
+
+                return (
+                  <Link
+                    key={predId}
+                    href={`/dashboard/predictions/${predId}`}
+                    className="flex items-center justify-between p-4 bg-dark-700/50 rounded-xl hover:bg-dark-700 border border-dark-600/50 hover:border-primary-500/30 transition-all group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-primary-500/20 border border-primary-500/30 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <FaChartLine className="text-primary-400" />
+                      </div>
+                      <div>
+                        <p className="text-white font-semibold">{item.file_path || 'Unknown'}</p>
+                        <p className="text-sm text-gray-400">{timeAgo}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className={`px-3 py-1.5 ${colors.bg} ${colors.text} text-xs font-semibold rounded-full border ${colors.border} capitalize`}>
+                        {riskLevel} Risk
+                      </span>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-white">{prob}%</p>
+                        <p className="text-xs text-gray-500">probability</p>
+                      </div>
+                    </div>
+                  </Link>
+                )
+              })
+            )}
           </div>
         </div>
       </div>

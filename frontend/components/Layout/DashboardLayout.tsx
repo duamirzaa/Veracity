@@ -24,11 +24,14 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const { user, logout } = useAuth()
+  const { user, logout, loading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
 
-  const navigation = user?.role === 'admin'
+  const isAdminRoute = pathname.startsWith('/dashboard/admin')
+  const showAdminNav = user?.role === 'admin' || (loading && isAdminRoute)
+
+  const navigation = showAdminNav
     ? [
         { name: 'Analysis Dashboard', href: '/dashboard/admin/dashboard', icon: FaChartLine },
         { name: 'Project Registry', href: '/dashboard/admin/projects', icon: FaProjectDiagram },
@@ -126,7 +129,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="flex items-center gap-3 mb-3 p-3 rounded-xl bg-dark-700/30 backdrop-blur-sm border border-dark-600/30">
             <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
               <span className="text-sm font-semibold text-dark-900">
-                {user?.email?.charAt(0).toUpperCase() || 'U'}
+                {(user?.full_name || user?.email || 'U').charAt(0).toUpperCase()}
               </span>
             </div>
             {sidebarOpen && (

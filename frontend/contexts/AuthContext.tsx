@@ -24,6 +24,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>
   register: (email: string, password: string, full_name?: string) => Promise<void>
   logout: () => void
+  updateUser: (updatedUser: Partial<User>) => void
   isAuthenticated: boolean
   loading: boolean
   error: string | null
@@ -38,20 +39,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Check for stored auth on mount
-    const storedToken = Cookies.get('auth_token')
-    const storedUser = Cookies.get('auth_user')
-    if (storedToken && storedUser) {
-      try {
-        setToken(storedToken)
-        setUser(JSON.parse(storedUser))
-      } catch (error) {
-        console.error('Error parsing stored user:', error)
-        Cookies.remove('auth_token')
-        Cookies.remove('auth_user')
+    const initAuth = async () => {
+      // Check for stored auth on mount
+      const storedToken = Cookies.get('auth_token')
+      const storedUser = Cookies.get('auth_user')
+      if (storedToken && storedUser) {
+        try {
+          setToken(storedToken)
+          setUser(JSON.parse(storedUser))
+          
+          // Verify token and get fresh user data from backend
+          const freshUser = await authService.verifyToken()
+          setUser(freshUser)
+          Cookies.set('auth_user', JSON.stringify(freshUser), { expires: 7 })
+        } catch (error) {
+          console.error('Token verification failed:', error)
+          // Token is invalid, clear everything
+          Cookies.remove('auth_token')
+          Cookies.remove('auth_user')
+          setToken(null)
+          setUser(null)
+        }
       }
+      setLoading(false)
     }
-    setLoading(false)
+
+    initAuth()
   }, [])
 
   const login = async (email: string, password: string) => {
@@ -99,6 +112,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     Cookies.remove('auth_user')
   }
 
+  const updateUser = (updatedFields: Partial<User>) => {
+    setUser(prev => {
+      if (!prev) return prev
+      const updated = { ...prev, ...updatedFields }
+      Cookies.set('auth_user', JSON.stringify(updated), { expires: 7 })
+      return updated
+    })
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -107,6 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         register,
         logout,
+        updateUser,
         isAuthenticated: !!user,
         loading,
         error,

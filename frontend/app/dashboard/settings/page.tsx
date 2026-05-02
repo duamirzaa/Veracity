@@ -1,24 +1,123 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import DashboardLayout from '@/components/Layout/DashboardLayout'
 import { useAuth } from '@/contexts/AuthContext'
-import { FaUser, FaCreditCard, FaBell, FaShieldAlt, FaCheck } from 'react-icons/fa'
+import { updateProfile } from '@/services/auth'
+import { FaUser, FaCreditCard, FaBell, FaShieldAlt, FaCheck, FaSpinner } from 'react-icons/fa'
 
 export default function SettingsPage() {
-  const { user } = useAuth()
+  const { user, updateUser } = useAuth()
   const [activeTab, setActiveTab] = useState<'profile' | 'subscription' | 'notifications' | 'security'>('profile')
   const [formData, setFormData] = useState({
     full_name: user?.full_name || '',
     email: user?.email || '',
   })
+  const [saving, setSaving] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  // Local Storage Settings
+  const [notificationPrefs, setNotificationPrefs] = useState({
+    emailUpdates: true,
+    highRiskAlerts: true,
+    weeklyReports: false,
+    systemUpdates: true,
+  })
+  
+  const [securityPrefs, setSecurityPrefs] = useState({
+    twoFactorEnabled: false,
+  })
+
+  // Password state
+  const [passwords, setPasswords] = useState({
+    new_password: '',
+    confirm_password: '',
+  })
+  const [passError, setPassError] = useState<string | null>(null)
+  const [passSuccess, setPassSuccess] = useState(false)
+
+  // Sync formData with user object when it's loaded or changed
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        full_name: user.full_name || '',
+        email: user.email || '',
+      })
+    }
+    
+    // Load local storage preferences
+    if (user?.id) {
+      const storedNotifs = localStorage.getItem(`notifs_${user.id}`)
+      if (storedNotifs) setNotificationPrefs(JSON.parse(storedNotifs))
+        
+      const storedSecurity = localStorage.getItem(`security_${user.id}`)
+      if (storedSecurity) setSecurityPrefs(JSON.parse(storedSecurity))
+    }
+  }, [user])
+
+  const handleNotifToggle = (key: keyof typeof notificationPrefs) => {
+    if (!user) return
+    const newPrefs = { ...notificationPrefs, [key]: !notificationPrefs[key] }
+    setNotificationPrefs(newPrefs)
+    localStorage.setItem(`notifs_${user.id}`, JSON.stringify(newPrefs))
+  }
+
+  const handle2FAToggle = () => {
+    if (!user) return
+    const newPrefs = { ...securityPrefs, twoFactorEnabled: !securityPrefs.twoFactorEnabled }
+    setSecurityPrefs(newPrefs)
+    localStorage.setItem(`security_${user.id}`, JSON.stringify(newPrefs))
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
+    setSaveSuccess(false)
+    setSaveError(null)
   }
 
-  const handleSave = () => {
-    // In real app, this would save to backend
+  const handleSave = async () => {
+    try {
+      setSaving(true)
+      setSaveError(null)
+      setSaveSuccess(false)
+
+      const updatedUser = await updateProfile({ full_name: formData.full_name })
+      updateUser({ full_name: updatedUser.full_name ?? formData.full_name })
+      setSaveSuccess(true)
+    } catch (err: any) {
+      console.error('Failed to save profile:', err)
+      const message = err?.response?.data?.error || err?.message || 'Failed to save changes'
+      setSaveError(message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleUpdatePassword = async () => {
+    setPassError(null)
+    setPassSuccess(false)
+    
+    if (passwords.new_password !== passwords.confirm_password) {
+      setPassError('New passwords do not match')
+      return
+    }
+    
+    if (passwords.new_password.length < 6) {
+      setPassError('Password must be at least 6 characters')
+      return
+    }
+
+    try {
+      setSaving(true)
+      await updateProfile({ password: passwords.new_password })
+      setPassSuccess(true)
+      setPasswords({ new_password: '', confirm_password: '' })
+    } catch (err: any) {
+      setPassError(err?.response?.data?.error || 'Failed to update password')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const plans = [
@@ -51,18 +150,17 @@ export default function SettingsPage() {
       popular: true,
     },
     {
-      name: 'Enterprise',
-      price: 'Custom',
-      period: '',
+      name: 'Student',
+      price: '$0',
+      period: 'month',
       features: [
-        'Everything in Pro',
-        'Custom integrations',
-        'Dedicated support',
-        'SLA guarantees',
-        'On-premise deployment',
-        'Custom training',
+        'Everything in Free',
+        'PDF report generation',
+        'SHAP explainability',
+        'Chatbot support',
+        'Academic use',
       ],
-      current: false,
+      current: user?.role === 'student',
     },
   ]
 
@@ -138,21 +236,40 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Email (Read-only)</label>
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  readOnly
+                  className="w-full px-4 py-3 bg-dark-700/50 border border-dark-600 rounded-lg text-gray-400 cursor-not-allowed focus:outline-none"
                 />
+                <p className="text-xs text-gray-500 mt-1">Email cannot be changed directly.</p>
               </div>
+              {saveError && (
+                <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3 text-red-400 text-sm">
+                  {saveError}
+                </div>
+              )}
+              {saveSuccess && (
+                <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-3 text-green-400 text-sm flex items-center gap-2">
+                  <FaCheck /> Profile updated successfully
+                </div>
+              )}
               <div className="pt-4">
                 <button
                   onClick={handleSave}
-                  className="px-6 py-3 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-semibold transition-colors"
+                  disabled={saving}
+                  className="px-6 py-3 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-white rounded-lg font-semibold transition-colors flex items-center gap-2"
                 >
-                  Save Changes
+                  {saving ? (
+                    <>
+                      <FaSpinner className="animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
                 </button>
               </div>
             </div>
@@ -227,7 +344,7 @@ export default function SettingsPage() {
                       }`}
                       disabled={plan.current}
                     >
-                      {plan.current ? 'Current Plan' : plan.name === 'Enterprise' ? 'Contact Sales' : 'Upgrade'}
+                      {plan.current ? 'Current Plan' : plan.name === 'Student' ? 'Student Only' : 'Upgrade'}
                     </button>
                   </div>
                 ))}
@@ -242,18 +359,23 @@ export default function SettingsPage() {
             <h2 className="text-xl font-semibold text-white mb-6">Notification Preferences</h2>
             <div className="space-y-4">
               {[
-                { label: 'Email notifications', description: 'Receive email updates about your analyses' },
-                { label: 'High risk alerts', description: 'Get notified when high-risk defects are detected' },
-                { label: 'Weekly reports', description: 'Receive weekly summary reports' },
-                { label: 'System updates', description: 'Notifications about new features and updates' },
-              ].map((item, index) => (
-                <div key={index} className="flex items-center justify-between p-4 bg-dark-700/50 rounded-lg">
+                { key: 'emailUpdates', label: 'Email notifications', description: 'Receive email updates about your analyses' },
+                { key: 'highRiskAlerts', label: 'High risk alerts', description: 'Get notified when high-risk defects are detected' },
+                { key: 'weeklyReports', label: 'Weekly reports', description: 'Receive weekly summary reports' },
+                { key: 'systemUpdates', label: 'System updates', description: 'Notifications about new features and updates' },
+              ].map((item) => (
+                <div key={item.key} className="flex items-center justify-between p-4 bg-dark-700/50 rounded-lg">
                   <div>
                     <p className="text-white font-medium">{item.label}</p>
                     <p className="text-sm text-gray-400">{item.description}</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" defaultChecked />
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer" 
+                      checked={notificationPrefs[item.key as keyof typeof notificationPrefs]} 
+                      onChange={() => handleNotifToggle(item.key as keyof typeof notificationPrefs)}
+                    />
                     <div className="w-11 h-6 bg-dark-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-500"></div>
                   </label>
                 </div>
@@ -271,16 +393,15 @@ export default function SettingsPage() {
                 <h3 className="text-lg font-medium text-white mb-4">Change Password</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Current Password</label>
-                    <input
-                      type="password"
-                      className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                  </div>
-                  <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">New Password</label>
                     <input
                       type="password"
+                      value={passwords.new_password}
+                      onChange={(e) => {
+                        setPasswords({ ...passwords, new_password: e.target.value })
+                        setPassSuccess(false)
+                        setPassError(null)
+                      }}
                       className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
@@ -288,10 +409,25 @@ export default function SettingsPage() {
                     <label className="block text-sm font-medium text-gray-300 mb-2">Confirm New Password</label>
                     <input
                       type="password"
+                      value={passwords.confirm_password}
+                      onChange={(e) => {
+                        setPasswords({ ...passwords, confirm_password: e.target.value })
+                        setPassSuccess(false)
+                        setPassError(null)
+                      }}
                       className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
-                  <button className="px-6 py-3 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-semibold transition-colors">
+                  
+                  {passError && <div className="text-red-400 text-sm mt-2">{passError}</div>}
+                  {passSuccess && <div className="text-green-400 text-sm mt-2 flex items-center gap-2"><FaCheck /> Password updated successfully</div>}
+                  
+                  <button 
+                    onClick={handleUpdatePassword}
+                    disabled={saving}
+                    className="px-6 py-3 mt-4 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-white rounded-lg font-semibold transition-colors flex items-center gap-2"
+                  >
+                    {saving ? <FaSpinner className="animate-spin" /> : null}
                     Update Password
                   </button>
                 </div>
@@ -305,7 +441,12 @@ export default function SettingsPage() {
                     <p className="text-sm text-gray-400">Add an extra layer of security to your account</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" />
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer" 
+                      checked={securityPrefs.twoFactorEnabled}
+                      onChange={handle2FAToggle}
+                    />
                     <div className="w-11 h-6 bg-dark-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-500"></div>
                   </label>
                 </div>
