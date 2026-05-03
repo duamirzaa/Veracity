@@ -25,7 +25,7 @@ export default function SettingsPage() {
     weeklyReports: false,
     systemUpdates: true,
   })
-  
+
   const [securityPrefs, setSecurityPrefs] = useState({
     twoFactorEnabled: false,
   })
@@ -46,12 +46,12 @@ export default function SettingsPage() {
         email: user.email || '',
       })
     }
-    
+
     // Load local storage preferences
     if (user?.id) {
       const storedNotifs = localStorage.getItem(`notifs_${user.id}`)
       if (storedNotifs) setNotificationPrefs(JSON.parse(storedNotifs))
-        
+
       const storedSecurity = localStorage.getItem(`security_${user.id}`)
       if (storedSecurity) setSecurityPrefs(JSON.parse(storedSecurity))
     }
@@ -98,12 +98,12 @@ export default function SettingsPage() {
   const handleUpdatePassword = async () => {
     setPassError(null)
     setPassSuccess(false)
-    
+
     if (passwords.new_password !== passwords.confirm_password) {
       setPassError('New passwords do not match')
       return
     }
-    
+
     if (passwords.new_password.length < 6) {
       setPassError('Password must be at least 6 characters')
       return
@@ -190,44 +190,40 @@ export default function SettingsPage() {
         <div className="flex gap-4 border-b border-dark-700">
           <button
             onClick={() => setActiveTab('profile')}
-            className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
-              activeTab === 'profile'
+            className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${activeTab === 'profile'
                 ? 'text-primary-500 border-b-2 border-primary-500'
                 : 'text-gray-400 hover:text-white'
-            }`}
+              }`}
           >
             <FaUser />
             Profile
           </button>
           <button
             onClick={() => setActiveTab('subscription')}
-            className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
-              activeTab === 'subscription'
+            className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${activeTab === 'subscription'
                 ? 'text-primary-500 border-b-2 border-primary-500'
                 : 'text-gray-400 hover:text-white'
-            }`}
+              }`}
           >
             <FaCreditCard />
             Subscription
           </button>
           <button
             onClick={() => setActiveTab('notifications')}
-            className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
-              activeTab === 'notifications'
+            className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${activeTab === 'notifications'
                 ? 'text-primary-500 border-b-2 border-primary-500'
                 : 'text-gray-400 hover:text-white'
-            }`}
+              }`}
           >
             <FaBell />
             Notifications
           </button>
           <button
             onClick={() => setActiveTab('security')}
-            className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
-              activeTab === 'security'
+            className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${activeTab === 'security'
                 ? 'text-primary-500 border-b-2 border-primary-500'
                 : 'text-gray-400 hover:text-white'
-            }`}
+              }`}
           >
             <FaShieldAlt />
             Security
@@ -312,11 +308,10 @@ export default function SettingsPage() {
                 {plans.map((plan) => (
                   <div
                     key={plan.name}
-                    className={`bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 border ${
-                      plan.popular
+                    className={`bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 border ${plan.popular
                         ? 'border-primary-500/50 ring-2 ring-primary-500/20'
                         : 'border-dark-700/50'
-                    } relative`}
+                      } relative`}
                   >
                     {plan.popular && (
                       <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
@@ -350,13 +345,12 @@ export default function SettingsPage() {
                     </ul>
                     <button
                       onClick={plan.name === 'Pro' ? handleUpgrade : undefined}
-                      className={`w-full py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${
-                        plan.current
+                      className={`w-full py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${plan.current
                           ? 'bg-dark-700 text-gray-400 cursor-not-allowed'
                           : plan.popular
-                          ? 'bg-gradient-to-r from-primary-500 to-primary-400 hover:from-primary-600 hover:to-primary-500 text-white shadow-lg shadow-primary-500/20'
-                          : 'bg-dark-700 hover:bg-dark-600 text-white'
-                      } ${saving && plan.name === 'Pro' ? 'opacity-50 cursor-wait' : ''}`}
+                            ? 'bg-gradient-to-r from-primary-500 to-primary-400 hover:from-primary-600 hover:to-primary-500 text-white shadow-lg shadow-primary-500/20'
+                            : 'bg-dark-700 hover:bg-dark-600 text-white'
+                        } ${saving && plan.name === 'Pro' ? 'opacity-50 cursor-wait' : ''}`}
                       disabled={plan.current || (saving && plan.name === 'Pro')}
                     >
                       {plan.current ? (
@@ -400,10 +394,10 @@ export default function SettingsPage() {
                     <p className="text-sm text-gray-400">{item.description}</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      className="sr-only peer" 
-                      checked={notificationPrefs[item.key as keyof typeof notificationPrefs]} 
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={notificationPrefs[item.key as keyof typeof notificationPrefs]}
                       onChange={() => handleNotifToggle(item.key as keyof typeof notificationPrefs)}
                     />
                     <div className="w-11 h-6 bg-dark-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-500"></div>
@@ -448,11 +442,11 @@ export default function SettingsPage() {
                       className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
-                  
+
                   {passError && <div className="text-red-400 text-sm mt-2">{passError}</div>}
                   {passSuccess && <div className="text-green-400 text-sm mt-2 flex items-center gap-2"><FaCheck /> Password updated successfully</div>}
-                  
-                  <button 
+
+                  <button
                     onClick={handleUpdatePassword}
                     disabled={saving}
                     className="px-6 py-3 mt-4 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-white rounded-lg font-semibold transition-colors flex items-center gap-2"
@@ -471,9 +465,9 @@ export default function SettingsPage() {
                     <p className="text-sm text-gray-400">Add an extra layer of security to your account</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      className="sr-only peer" 
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
                       checked={securityPrefs.twoFactorEnabled}
                       onChange={handle2FAToggle}
                     />

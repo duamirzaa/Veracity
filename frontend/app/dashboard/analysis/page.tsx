@@ -197,9 +197,6 @@ function AnalysisContent() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-white">Python Code</h2>
                 <div className="flex gap-2">
-                  <button className="p-2 bg-dark-700/50 hover:bg-dark-600 border border-dark-600/50 rounded-lg text-gray-400 hover:text-white transition-colors">
-                    <FaGithub />
-                  </button>
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     className="p-2 bg-dark-700/50 hover:bg-dark-600 border border-dark-600/50 rounded-lg text-gray-400 hover:text-white transition-colors"
@@ -410,7 +407,7 @@ function AnalysisContent() {
 
                           // Handle arrays (like messages or quick_replies)
                           if (Array.isArray(value)) {
-                            if (key === 'quick_replies') {
+                            if (key === 'quick_replies' && projectId) {
                               return (
                                 <div key={idx} className="mt-4">
                                   <span className="text-xs font-bold text-gray-500 uppercase block mb-2 ml-1">Suggested Questions</span>
@@ -467,13 +464,15 @@ function AnalysisContent() {
                 ) : (
                   <div className="text-center py-4">
                     <p className="text-gray-400 text-sm mb-4">No specific mitigation strategies found for these metrics.</p>
-                    <button
-                      onClick={() => setChatbotOpen(true)}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-dark-700 hover:bg-dark-600 text-primary-400 hover:text-primary-300 rounded-lg transition-colors border border-dark-600 text-sm"
-                    >
-                      <FaComments />
-                      Consult AI Assistant
-                    </button>
+                    {projectId && (
+                      <button
+                        onClick={() => setChatbotOpen(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-dark-700 hover:bg-dark-600 text-primary-400 hover:text-primary-300 rounded-lg transition-colors border border-dark-600 text-sm"
+                      >
+                        <FaComments />
+                        Consult AI Assistant
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -492,21 +491,23 @@ function AnalysisContent() {
               </div>
 
               {/* Chatbot Support */}
-              <div className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 border border-dark-700/50">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-xl font-semibold text-white mb-2">Need Help?</h2>
-                    <p className="text-gray-400">Get mitigation strategies and advice from our AI chatbot</p>
+              {projectId && (
+                <div className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 border border-dark-700/50">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-semibold text-white mb-2">Need Help?</h2>
+                      <p className="text-gray-400">Get mitigation strategies and advice from our AI chatbot</p>
+                    </div>
+                    <button
+                      onClick={() => setChatbotOpen(true)}
+                      className="flex items-center gap-2 px-6 py-3 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors font-semibold"
+                    >
+                      <FaComments />
+                      Open Chatbot
+                    </button>
                   </div>
-                  <button
-                    onClick={() => setChatbotOpen(true)}
-                    className="flex items-center gap-2 px-6 py-3 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors font-semibold"
-                  >
-                    <FaComments />
-                    Open Chatbot
-                  </button>
                 </div>
-              </div>
+              )}
             </div>
           )
         )}

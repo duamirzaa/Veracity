@@ -42,7 +42,7 @@ export default function PricingPage() {
         'Community access',
         'Free PDF reports'
       ],
-      cta: 'Current Plan',
+      cta: user?.role === 'student' ? 'Current Plan' : 'Student Only',
       active: user?.role === 'student',
       disabled: true
     },
@@ -57,7 +57,7 @@ export default function PricingPage() {
         'Community support',
         'JSON/XML reports'
       ],
-      cta: 'Current Plan',
+      cta: user?.tier === 'free' && user?.role !== 'student' ? 'Current Plan' : 'Standard Plan',
       active: user?.tier === 'free' && user?.role !== 'student',
       disabled: true
     },
@@ -98,9 +98,8 @@ export default function PricingPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className={`relative bg-dark-800 rounded-2xl p-8 border ${
-                plan.popular ? 'border-primary-500 shadow-lg shadow-primary-500/10' : 'border-dark-700'
-              } flex flex-col`}
+              className={`relative bg-dark-800 rounded-2xl p-8 border ${plan.popular ? 'border-primary-500 shadow-lg shadow-primary-500/10' : 'border-dark-700'
+                } flex flex-col`}
             >
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary-500 text-white text-xs font-bold px-4 py-1 rounded-full uppercase tracking-wider">
@@ -132,13 +131,12 @@ export default function PricingPage() {
               <button
                 onClick={plan.name === 'Pro' ? handleUpgrade : undefined}
                 disabled={plan.disabled || plan.active || loading}
-                className={`w-full py-4 rounded-xl font-bold transition-all ${
-                  plan.active
-                    ? 'bg-dark-700 text-gray-400 cursor-not-allowed'
-                    : plan.popular
+                className={`w-full py-4 rounded-xl font-bold transition-all ${plan.active
+                  ? 'bg-dark-700 text-gray-400 cursor-not-allowed'
+                  : plan.popular
                     ? 'bg-primary-500 hover:bg-primary-600 text-white shadow-lg shadow-primary-500/20'
                     : 'bg-dark-700 hover:bg-dark-600 text-white border border-dark-600'
-                } ${loading ? 'opacity-50 cursor-wait' : ''}`}
+                  } ${loading ? 'opacity-50 cursor-wait' : ''}`}
               >
                 {plan.active ? 'Current Plan' : loading && plan.name === 'Pro' ? 'Processing...' : plan.cta}
               </button>
@@ -149,7 +147,7 @@ export default function PricingPage() {
         <div className="mt-16 bg-dark-800/50 rounded-2xl p-8 border border-dark-700 text-center">
           <h3 className="text-xl font-bold text-white mb-2">Have questions about our plans?</h3>
           <p className="text-gray-400 mb-6">Contact our support team for custom enterprise solutions or academic discounts.</p>
-          <button 
+          <button
             onClick={() => router.push('/dashboard/chatbot')}
             className="text-primary-400 font-semibold hover:text-primary-300 underline underline-offset-4"
           >

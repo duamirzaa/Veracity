@@ -12,6 +12,9 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: 'Project Veracity - Software Defect Prediction',
   description: 'Comprehensive decision-support system for predicting software defects',
+  icons: {
+    icon: '/brand_icon.png',
+  },
 }
 
 export default function RootLayout({
