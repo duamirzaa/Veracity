@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import DashboardLayout from '@/components/Layout/DashboardLayout'
-import { FaFileAlt, FaDownload, FaFilePdf, FaFileCode, FaFile, FaSpinner, FaTrash } from 'react-icons/fa'
+import { FaFileAlt, FaSpinner } from 'react-icons/fa'
 import { useAuth } from '@/contexts/AuthContext'
-import type { Report } from '@/types/prediction'
 import { downloadUserProjectReport, downloadAdminReport, downloadManagerReport, downloadStudentReport, getAllowedReportFormats } from '@/services/reports'
 import * as projectsService from '@/services/projects'
 import type { Project } from '@/services/projects'
@@ -12,65 +11,23 @@ import { addNotification } from '@/services/notifications'
 
 type ReportFormat = 'json' | 'xml' | 'pdf'
 
-interface SavedReport extends Report {
-  projectId: number
-  projectName: string
-}
-
-const REPORTS_STORAGE_KEY = 'veracity_saved_reports'
-
-/**
- * Load saved reports from localStorage
- */
-function loadReportsFromStorage(): SavedReport[] {
-  try {
-    const stored = localStorage.getItem(REPORTS_STORAGE_KEY)
-    if (stored) {
-      return JSON.parse(stored)
-    }
-  } catch (err) {
-    console.error('Failed to load reports from storage:', err)
-  }
-  return []
-}
-
-/**
- * Save reports to localStorage
- */
-function saveReportsToStorage(reports: SavedReport[]) {
-  try {
-    localStorage.setItem(REPORTS_STORAGE_KEY, JSON.stringify(reports))
-  } catch (err) {
-    console.error('Failed to save reports to storage:', err)
-  }
-}
-
 export default function ReportsPage() {
   const { user } = useAuth()
   const [projects, setProjects] = useState<Project[]>([])
-  const [reports, setReports] = useState<SavedReport[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [generatingReportId, setGeneratingReportId] = useState<number | null>(null)
   const [selectedFormats, setSelectedFormats] = useState<Record<number, ReportFormat>>({})
-  const [deletingReportIdx, setDeletingReportIdx] = useState<number | null>(null)
+
+  // Clear legacy localStorage reports on mount
+  useEffect(() => {
+    localStorage.removeItem('veracity_saved_reports')
+  }, [])
 
   // Get allowed formats for the current user
   const allowedFormats: ReportFormat[] = user
     ? getAllowedReportFormats(user.role, user.tier)
     : ['json', 'xml']
-
-  // Load reports from localStorage on mount
-  useEffect(() => {
-    const savedReports = loadReportsFromStorage()
-    setReports(savedReports)
-  }, [])
-
-  // Persist reports to localStorage whenever they change
-  const updateReports = useCallback((newReports: SavedReport[]) => {
-    setReports(newReports)
-    saveReportsToStorage(newReports)
-  }, [])
 
   // Load projects from backend on mount
   useEffect(() => {
@@ -115,20 +72,28 @@ export default function ReportsPage() {
       const format = selectedFormats[projectId] || allowedFormats[0] || 'json'
       const project = projects.find(p => p.id === projectId)
 
-      // Save report entry so it persists across refresh
-      const newReport: SavedReport = {
-        title: `${project?.name || 'Project'} Report`,
-        report_type: user.role === 'admin' ? 'ADMIN_FULL_REPORT'
-          : user.role === 'project_manager' ? 'PROJECT_MANAGER_REPORT'
-          : 'USER_PROJECT_REPORT',
-        report_format: format,
-        generated_at: new Date().toISOString(),
-        projectId: projectId,
-        projectName: project?.name || 'Unknown Project',
+      let blob: Blob
+      
+      if (user.role === 'admin') {
+        blob = await downloadAdminReport(format)
+      } else if (user.role === 'project_manager') {
+        blob = await downloadManagerReport(format, user.tier)
+      } else if (user.role === 'student') {
+        blob = await downloadStudentReport(projectId, format)
+      } else {
+        blob = await downloadUserProjectReport(projectId, format, user.tier)
       }
+      
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `report_${project?.name || 'project'}_${new Date().toISOString().split('T')[0]}.${format}`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
 
-      updateReports([newReport, ...reports])
-      addNotification(`New ${format.toUpperCase()} report generated for project: ${project?.name || 'Unknown'}`)
+      addNotification(`Report downloaded: report_${project?.name || 'project'}.${format}`)
     } catch (err: any) {
       console.error('Failed to generate report:', err)
       const message = err?.response?.data?.error || err?.message || 'Failed to generate report'
@@ -136,67 +101,6 @@ export default function ReportsPage() {
     } finally {
       setGeneratingReportId(null)
     }
-  }
-
-  const handleDownload = async (report: SavedReport, idx: number) => {
-    try {
-      if (!user) return
-      
-      let blob: Blob
-      
-      if (user.role === 'admin') {
-        blob = await downloadAdminReport(report.report_format)
-      } else if (user.role === 'project_manager') {
-        blob = await downloadManagerReport(report.report_format, user.tier)
-      } else if (user.role === 'student') {
-        blob = await downloadStudentReport(report.projectId, report.report_format)
-      } else {
-        blob = await downloadUserProjectReport(report.projectId, report.report_format, user.tier)
-      }
-      
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `report_${report.projectName}_${new Date(report.generated_at).toISOString().split('T')[0]}.${report.report_format}`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
-      
-      addNotification(`Report downloaded: report_${report.projectName}.${report.report_format}`)
-    } catch (err: any) {
-      console.error('Download failed:', err)
-      const message = err?.response?.data?.error || err?.message || 'Failed to download report'
-      setError(message)
-    }
-  }
-
-  const handleDeleteReport = (idx: number) => {
-    setDeletingReportIdx(idx)
-    const updated = reports.filter((_, i) => i !== idx)
-    updateReports(updated)
-    setDeletingReportIdx(null)
-  }
-
-  const getFormatIcon = (format: string) => {
-    switch (format) {
-      case 'pdf':
-        return <FaFilePdf className="text-red-400" />
-      case 'xml':
-        return <FaFileCode className="text-blue-400" />
-      default:
-        return <FaFile className="text-green-400" />
-    }
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
   }
 
   const getFormatLabel = (format: string) => {
@@ -302,85 +206,6 @@ export default function ReportsPage() {
             </div>
           )}
         </div>
-
-        {/* Generated Reports History */}
-        {reports.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">Report History</h2>
-              <span className="text-gray-500 text-sm">{reports.length} report{reports.length !== 1 ? 's' : ''}</span>
-            </div>
-            <div className="bg-dark-800 rounded-lg border border-dark-700 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-dark-700">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                        Project
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                        Type
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                        Format
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                        Generated
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-dark-700">
-                    {reports.map((report, idx) => (
-                      <tr key={`${report.projectId}-${report.generated_at}-${idx}`} className="hover:bg-dark-700/50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-400">
-                          {report.projectName}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-3 py-1 bg-primary-500/20 text-primary-400 text-xs font-semibold rounded-full capitalize">
-                            {report.report_type}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            {getFormatIcon(report.report_format)}
-                            <span className="text-gray-400 uppercase">{report.report_format}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-400 text-sm">
-                          {formatDate(report.generated_at)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {/* Re-download button */}
-                            <button
-                              onClick={() => handleDownload(report, idx)}
-                              className="text-primary-500 hover:text-primary-400 p-2 transition-colors"
-                              title="Download again"
-                            >
-                              <FaDownload />
-                            </button>
-                            {/* Delete button */}
-                            <button
-                              onClick={() => handleDeleteReport(idx)}
-                              disabled={deletingReportIdx === idx}
-                              className="text-red-500 hover:text-red-400 p-2 transition-colors disabled:opacity-50"
-                              title="Delete report"
-                            >
-                              <FaTrash />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </DashboardLayout>
   )

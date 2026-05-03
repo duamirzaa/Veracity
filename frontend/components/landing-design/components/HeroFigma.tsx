@@ -117,7 +117,7 @@ function Container11() {
 function Heading() {
   return (
     <div className="relative w-full text-center" data-name="Heading 1">
-      <div className="font-['Plus_Jakarta_Sans:Bold',sans-serif] font-bold text-[2rem] sm:text-[2.8rem] md:text-[3.6rem] lg:text-[4.5rem] leading-[1.1] text-white px-3 sm:px-4">
+      <div className="font-['Plus_Jakarta_Sans:Bold',sans-serif] font-bold text-[1.85rem] sm:text-[2.6rem] md:text-[3.6rem] lg:text-[4.5rem] leading-[1.1] text-white px-3 sm:px-4">
         <p className="mb-0">Predict Software Risks</p>
         <p>Before They Become Failures</p>
       </div>
@@ -128,14 +128,14 @@ function Heading() {
 function Paragraph() {
   return (
     <div className="relative w-full px-4 sm:px-6" data-name="Paragraph">
-      <p className="mx-auto font-['Plus_Jakarta_Sans:Regular',sans-serif] font-normal leading-[1.8] text-[#99a1af] text-[0.95rem] sm:text-[1rem] md:text-[1.125rem] text-center max-w-3xl">Veracity uses Machine Learning and Explainable AI to detect hidden risks in your code and guide you with actionable solutions.</p>
+      <p className="mx-auto font-['Plus_Jakarta_Sans:Regular',sans-serif] font-normal leading-[1.8] text-[#99a1af] text-[0.9rem] sm:text-[1rem] md:text-[1.125rem] text-center max-w-3xl">Veracity uses Machine Learning and Explainable AI to detect hidden risks in your code and guide you with actionable solutions.</p>
     </div>
   );
 }
 
 function Frame() {
   return (
-    <div className="flex flex-col gap-4 sm:gap-5 md:gap-6 items-center w-full">
+    <div className="flex flex-col gap-3 sm:gap-4 md:gap-6 items-center w-full">
       <Heading />
       <Paragraph />
     </div>
@@ -196,7 +196,7 @@ function Container12({ onGetStarted }: HeroNewProps) {
 
 function Container10({ onGetStarted }: HeroNewProps) {
   return (
-    <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center gap-6 sm:gap-7 md:gap-8 lg:gap-10 px-4 sm:px-6 top-[290px] sm:top-[340px] md:top-[380px] lg:top-[420px] w-[min(94vw,1020px)]" data-name="Container">
+    <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center gap-5 sm:gap-7 md:gap-8 lg:gap-10 px-4 sm:px-6 top-[120px] sm:top-[180px] md:top-[280px] lg:top-[320px] w-[min(94vw,1020px)]" data-name="Container">
       <Container11 />
       <Frame />
       <Container12 onGetStarted={onGetStarted} />
@@ -211,7 +211,7 @@ function HeroNew({ onGetStarted }: HeroNewProps) {
       <Container5 />
       <Icon />
       <Container10 onGetStarted={onGetStarted} />
-      <div className="absolute left-1/2 -translate-x-1/2 top-[700px] sm:top-[800px] md:top-[900px] lg:top-[1000px] w-[min(94vw,1112px)] h-[auto] rounded-[20px] pointer-events-none" data-name="image 3">
+      <div className="absolute left-1/2 -translate-x-1/2 top-[480px] sm:top-[600px] md:top-[800px] lg:top-[900px] w-[min(94vw,1112px)] h-[auto] rounded-[20px] pointer-events-none" data-name="image 3">
         <div className="relative overflow-visible rounded-[20px] w-full h-full">
           <img alt="Dashboard Screenshot" className="w-full h-auto block" src='\landing\image3.png' />
         </div>
@@ -225,7 +225,7 @@ export function HeroFigma() {
   const router = useRouter();
 
   return (
-    <section id="home" className="relative overflow-hidden bg-black pt-16 sm:pt-20 md:pt-24">
+    <section id="home" className="relative overflow-hidden bg-black">
       <div className="relative mx-auto w-full max-w-[1533px]">
         <HeroNew onGetStarted={() => router.push("/auth/register")} />
       </div>

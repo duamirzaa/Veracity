@@ -36,7 +36,7 @@ export default function PricingPage() {
       price: 'Free',
       description: 'Ideal for learning and academic projects',
       features: [
-        '10 analyses per month',
+        '5 project creation limit',
         'Basic SHAP explanations',
         'Email support',
         'Community access',
@@ -52,7 +52,7 @@ export default function PricingPage() {
       price: '$0',
       description: 'Great for getting started with defect prediction',
       features: [
-        '10 analyses per month',
+        '5 project creation limit',
         'Basic SHAP explanations',
         'Community support',
         'JSON/XML reports'

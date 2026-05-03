@@ -35,7 +35,7 @@ export default function DashboardPage() {
     if (authLoading) return
 
     if (!isAuthenticated) {
-      router.push('/auth/login')
+      router.push('/')
       return
     }
     // Redirect admin users to admin dashboard

@@ -43,7 +43,7 @@ export default function LoginPage() {
 
       <div className="w-full max-w-lg relative z-10">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-4 mb-8">
+          <Link href="/" className="inline-flex items-center gap-4 mb-8 hover:opacity-80 transition-opacity">
               {/* The Shape Icon */}
               <img 
                 src="/brand_icon.png" 
@@ -56,7 +56,7 @@ export default function LoginPage() {
                 alt="Veracity" 
                 className="h-10 w-auto object-contain" 
               />
-            </div>
+            </Link>
           <h2 className="text-3xl font-semibold text-white mb-3">Welcome Back</h2>
           <p className="text-gray-400 text-lg">Sign in to your account to continue</p>
         </div>

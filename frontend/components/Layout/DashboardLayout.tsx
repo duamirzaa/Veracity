@@ -19,6 +19,9 @@ import {
 } from 'react-icons/fa'
 import Link from 'next/link'
 import HeaderActions from './HeaderActions'
+import UpgradeModal from './UpgradeModal'
+import { useEffect } from 'react'
+import { getProjects } from '@/services/projects'
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -26,9 +29,39 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false)
+  const [projectCount, setProjectCount] = useState(0)
   const { user, logout, loading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
+
+  const fetchProjectCount = async () => {
+    if (user && user.tier !== 'pro') {
+      try {
+        const response = await getProjects(1, 1) // Just need total
+        setProjectCount(response.total)
+      } catch (err) {
+        console.error('Failed to fetch project count:', err)
+      }
+    }
+  }
+
+  useEffect(() => {
+    fetchProjectCount()
+    
+    const handleUpgradeRequired = () => setUpgradeModalOpen(true)
+    const handleProjectUpdated = () => fetchProjectCount()
+
+    window.addEventListener('upgrade-required', handleUpgradeRequired)
+    window.addEventListener('project-created', handleProjectUpdated)
+    window.addEventListener('project-deleted', handleProjectUpdated)
+
+    return () => {
+      window.removeEventListener('upgrade-required', handleUpgradeRequired)
+      window.removeEventListener('project-created', handleProjectUpdated)
+      window.removeEventListener('project-deleted', handleProjectUpdated)
+    }
+  }, [user])
 
   const isAdminRoute = pathname.startsWith('/dashboard/admin')
   const showAdminNav = user?.role === 'admin' || (loading && isAdminRoute)
@@ -54,7 +87,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const handleLogout = () => {
     logout()
-    router.push('/auth/login')
+    router.push('/')
   }
 
   const isActive = (href: string) => {
@@ -82,7 +115,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Logo */}
         {/* Logo Area */}
 <div className="relative z-10 flex items-center justify-between p-4 border-b border-dark-700/50">
-  <div className="flex items-center gap-3">
+  <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
     {/* The Shape Icon (Always shows) */}
     <img 
       src="/brand_icon.png" 
@@ -98,7 +131,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         className="h-6 w-auto object-contain animate-in fade-in duration-300" 
       />
     )}
-  </div>
+  </Link>
   <button onClick={() => setSidebarOpen(!sidebarOpen)} className="...">
     {sidebarOpen ? <FaTimes /> : <FaBars />}
   </button>
@@ -170,9 +203,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               ) : (
                 <>
                   <div className="hidden md:flex items-center gap-3 px-3 py-1 bg-dark-700/50 rounded-full border border-dark-600/50">
+                    {user?.role === 'student' && (
+                      <span className="text-[10px] text-primary-400 font-bold uppercase tracking-wider border-r border-dark-600 pr-3">Student</span>
+                    )}
                     <div className="flex items-center gap-1.5">
                       <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Credits:</span>
-                      <span className="text-[10px] text-white font-bold">10/10</span>
+                      <span className="text-[10px] text-white font-bold">
+                        {Math.max(0, 5 - projectCount)}/5
+                      </span>
                     </div>
                   </div>
                   <Link
@@ -192,6 +230,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto bg-dark-900 p-6">{children}</main>
       </div>
+
+      <UpgradeModal 
+        isOpen={upgradeModalOpen} 
+        onClose={() => setUpgradeModalOpen(false)} 
+      />
     </div>
   )
 }

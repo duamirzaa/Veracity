@@ -8,7 +8,7 @@ export function ProblemSection() {
   const isInView = useInView(ref, { once: true, margin: "-100px" });
 
   return (
-    <section ref={ref} className="relative py-32 px-6 overflow-hidden bg-black">
+    <section ref={ref} className="relative py-20 sm:py-24 md:py-32 px-6 overflow-hidden bg-black">
       <div className="relative z-10 max-w-7xl mx-auto">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           <motion.div
@@ -20,7 +20,7 @@ export function ProblemSection() {
               <span className="text-[#14a085] text-sm" style={{ fontWeight: 500 }}>The Problem</span>
             </div>
 
-            <h2 className="text-4xl md:text-5xl mb-6 text-white" style={{ fontWeight: 700, lineHeight: 1.2 }}>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl mb-6 text-white" style={{ fontWeight: 700, lineHeight: 1.2 }}>
               Most Software Failures<br />Aren&apos;t Sudden — They<br />Build Up Quietly
             </h2>
 

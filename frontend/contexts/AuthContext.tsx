@@ -22,7 +22,7 @@ interface AuthContextType {
   user: User | null
   token: string | null
   login: (email: string, password: string) => Promise<void>
-  register: (email: string, password: string, full_name?: string) => Promise<void>
+  register: (email: string, password: string, full_name?: string, role?: string, tier?: string) => Promise<void>
   logout: () => void
   updateUser: (updatedUser: Partial<User>) => void
   isAuthenticated: boolean
@@ -86,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const register = async (email: string, password: string, full_name?: string) => {
+  const register = async (email: string, password: string, full_name?: string, role?: string, tier?: string) => {
     try {
       setLoading(true)
       setError(null)
@@ -94,6 +94,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         password,
         full_name,
+        role,
+        tier,
       })
       // Registration successful - user must login after
     } catch (err) {

@@ -14,9 +14,15 @@ export default function RegisterPage() {
     confirmPassword: '',
   })
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
   const { register } = useAuth()
   const router = useRouter()
+
+  const isStudentEmail = (email: string) => {
+    const domain = email.toLowerCase().split('@')[1]
+    return domain && (domain.endsWith('.edu.pk') || domain.endsWith('.edu'))
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -39,8 +45,21 @@ export default function RegisterPage() {
     setLoading(true)
 
     try {
-      await register(formData.email, formData.password, formData.full_name)
-      router.push('/auth/login')
+      const isStudent = isStudentEmail(formData.email)
+      const role = isStudent ? 'student' : 'user'
+      const tier = 'free' // Registration always starts with free tier unless otherwise specified
+
+      await register(formData.email, formData.password, formData.full_name, role, tier)
+      
+      if (formData.email.toLowerCase().endsWith('.edu.pk')) {
+        setSuccess('🎓 Student account detected! Your account has been created with exclusive PDF report access.')
+      } else {
+        setSuccess('Account created successfully! Redirecting to login...')
+      }
+
+      setTimeout(() => {
+        router.push('/auth/login')
+      }, 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed')
     } finally {
@@ -66,7 +85,7 @@ export default function RegisterPage() {
       {/* Left Side - Informative Panel */}
       <div className="hidden lg:flex w-1/2 relative z-10 flex-col justify-center px-12 text-white">
         <div className="max-w-lg">
-          <div className="inline-flex items-center gap-4 mb-8">
+          <Link href="/" className="inline-flex items-center gap-4 mb-8 hover:opacity-80 transition-opacity">
               {/* The Shape Icon */}
               <img 
                 src="/brand_icon.png" 
@@ -79,7 +98,7 @@ export default function RegisterPage() {
                 alt="Veracity" 
                 className="h-10 w-auto object-contain" 
               />
-            </div>
+            </Link>
           
           <h2 className="text-4xl font-bold mb-4">Start Your Journey with Project Veracity</h2>
           <p className="text-xl text-gray-300 mb-8">Predict software defects with AI-powered analysis and get actionable insights</p>
@@ -140,20 +159,20 @@ export default function RegisterPage() {
       <div className="w-full lg:w-1/2 relative z-10 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
           <div className="text-center mb-10 lg:hidden">
-            <div className="inline-flex items-center gap-4 mb-8">
-              <div className="w-16 h-16 flex items-center justify-center">
-                <svg viewBox="0 0 100 100" className="w-full h-full">
-                  <path d="M20 20 L50 80 L80 20" stroke="url(#vGradient)" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-                  <defs>
-                    <linearGradient id="vGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" stopColor="#14a085" />
-                      <stop offset="100%" stopColor="#1abba1" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-              </div>
-              <h1 className="text-5xl font-bold text-white tracking-wide">VERACITY</h1>
-            </div>
+            <Link href="/" className="inline-flex items-center gap-3 mb-8 hover:opacity-80 transition-opacity">
+              {/* The Shape Icon */}
+              <img 
+                src="/brand_icon.png" 
+                alt="Icon" 
+                className="h-12 w-12 object-contain" 
+              />
+              {/* The Font Logo */}
+              <img 
+                src="/brand_text.png" 
+                alt="Veracity" 
+                className="h-7 w-auto object-contain" 
+              />
+            </Link>
             <h2 className="text-3xl font-semibold text-white mb-3">Create Account</h2>
             <p className="text-gray-400 text-lg">Sign up to get started</p>
           </div>
@@ -168,6 +187,12 @@ export default function RegisterPage() {
             {error && (
               <div className="bg-red-900/20 border border-red-500 text-red-400 px-4 py-3 rounded">
                 {error}
+              </div>
+            )}
+            
+            {success && (
+              <div className="bg-primary-500/10 border border-primary-500 text-primary-400 px-4 py-3 rounded">
+                {success}
               </div>
             )}
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/Layout/DashboardLayout'
+import { useAuth } from '@/contexts/AuthContext'
 import { FaPlus, FaGithub, FaFolder, FaTrash, FaEdit, FaCode, FaSpinner } from 'react-icons/fa'
 import * as projectsService from '@/services/projects'
 import type { Project } from '@/services/projects'
@@ -12,6 +13,7 @@ import { addNotification } from '@/services/notifications'
 export default function ProjectsPage() {
   const [submitting, setSubmitting] = useState(false)
   const router = useRouter()
+  const { user } = useAuth()
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -67,6 +69,13 @@ export default function ProjectsPage() {
       return
     }
 
+    // Check project limit for free users
+    if (user?.tier !== 'pro' && projects.length >= 5) {
+      window.dispatchEvent(new CustomEvent('upgrade-required'))
+      setShowModal(false)
+      return
+    }
+
     try {
       setSubmitting(true)
       setError(null)
@@ -81,6 +90,7 @@ export default function ProjectsPage() {
       setFileInput(null)
       setShowModal(false)
       addNotification(`Project created: ${newProject.name}. Initial analysis triggered.`)
+      window.dispatchEvent(new CustomEvent('project-created'))
     } catch (err) {
       console.error('Failed to create project:', err)
       setError('Failed to create project')
@@ -95,6 +105,7 @@ export default function ProjectsPage() {
       setError(null)
       await projectsService.archiveProject(id)
       setProjects(projects.filter((p) => p.id !== id))
+      window.dispatchEvent(new CustomEvent('project-deleted'))
     } catch (err) {
       console.error('Failed to delete project:', err)
       setError('Failed to delete project')
@@ -296,9 +307,17 @@ export default function ProjectsPage() {
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-primary-500 hover:bg-primary-600 text-white py-2 rounded-lg transition-colors"
+                    disabled={submitting}
+                    className="flex-1 bg-primary-500 hover:bg-primary-600 text-white py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    Create
+                    {submitting ? (
+                      <>
+                        <FaSpinner className="animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      'Create'
+                    )}
                   </button>
                 </div>
               </form>

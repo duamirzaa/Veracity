@@ -16,15 +16,15 @@ export function HowItWorksFigma() {
   ];
 
   return (
-    <section ref={ref} className="relative py-32 px-6 overflow-hidden bg-black">
+    <section ref={ref} className="relative py-20 sm:py-24 md:py-32 px-6 overflow-hidden bg-black">
       <div className="relative z-10 max-w-6xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.8 }}
-          className="text-center mb-20"
+          className="text-center mb-16 sm:mb-20"
         >
-          <h2 className="text-5xl mb-4 text-white" style={{ fontWeight: 700, lineHeight: 1.2 }}>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl mb-4 text-white" style={{ fontWeight: 700, lineHeight: 1.2 }}>
             How Veracity Works
           </h2>
           <p className="text-lg text-[#99a1af]" style={{ fontWeight: 400 }}>
@@ -36,9 +36,9 @@ export function HowItWorksFigma() {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={isInView ? { opacity: 1, scale: 1 } : {}}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="relative flex items-center justify-center gap-[173px] mb-20"
+          className="relative flex items-center justify-center gap-4 sm:gap-10 md:gap-[173px] mb-20"
         >
-          <div className="absolute top-1/2 left-[58px] right-[58px] h-[2px]">
+          <div className="absolute top-1/2 left-[58px] right-[58px] h-[2px] hidden lg:block">
             <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 866 2" fill="none">
               <line
                 x1="0"
@@ -74,7 +74,7 @@ export function HowItWorksFigma() {
           ))}
         </motion.div>
 
-        <div className="grid grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
           {steps.map((step, index) => (
             <motion.div
               key={index}

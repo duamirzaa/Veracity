@@ -39,7 +39,15 @@ apiClient.interceptors.response.use(
       // Token expired or invalid - clear auth
       Cookies.remove('auth_token')
       Cookies.remove('auth_user')
-      window.location.href = '/auth/login'
+      window.location.href = '/'
+    }
+
+    if (error.response?.status === 403) {
+      const data = error.response.data as any
+      if (data?.upgrade_required) {
+        // Dispatch custom event for UI to show upgrade modal
+        window.dispatchEvent(new CustomEvent('upgrade-required'))
+      }
     }
     return Promise.reject(error)
   }
