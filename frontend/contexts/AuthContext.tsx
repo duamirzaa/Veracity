@@ -28,6 +28,7 @@ interface AuthContextType {
   isAuthenticated: boolean
   loading: boolean
   error: string | null
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -112,6 +113,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     Cookies.remove('auth_user')
   }
 
+  const refreshUser = async () => {
+    try {
+      const freshUser = await authService.verifyToken()
+      setUser(freshUser)
+      Cookies.set('auth_user', JSON.stringify(freshUser), { expires: 7 })
+    } catch (error) {
+      console.error('Failed to refresh user:', error)
+      throw error
+    }
+  }
+
   const updateUser = (updatedFields: Partial<User>) => {
     setUser(prev => {
       if (!prev) return prev
@@ -133,6 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated: !!user,
         loading,
         error,
+        refreshUser,
       }}
     >
       {children}

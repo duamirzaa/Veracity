@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import DashboardLayout from '@/components/Layout/DashboardLayout'
 import { useAuth } from '@/contexts/AuthContext'
 import { updateProfile } from '@/services/auth'
-import { FaUser, FaCreditCard, FaBell, FaShieldAlt, FaCheck, FaSpinner } from 'react-icons/fa'
+import { createPaymentSession } from '@/services/payment'
+import { FaUser, FaCreditCard, FaBell, FaShieldAlt, FaCheck, FaSpinner, FaCrown } from 'react-icons/fa'
 
 export default function SettingsPage() {
   const { user, updateUser } = useAuth()
@@ -115,6 +116,19 @@ export default function SettingsPage() {
       setPasswords({ new_password: '', confirm_password: '' })
     } catch (err: any) {
       setPassError(err?.response?.data?.error || 'Failed to update password')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleUpgrade = async () => {
+    try {
+      setSaving(true)
+      const { checkout_url } = await createPaymentSession('pro')
+      window.location.href = checkout_url
+    } catch (error) {
+      console.error('Upgrade failed:', error)
+      alert('Failed to initiate payment. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -335,16 +349,32 @@ export default function SettingsPage() {
                       ))}
                     </ul>
                     <button
-                      className={`w-full py-3 rounded-lg font-semibold transition-colors ${
+                      onClick={plan.name === 'Pro' ? handleUpgrade : undefined}
+                      className={`w-full py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${
                         plan.current
                           ? 'bg-dark-700 text-gray-400 cursor-not-allowed'
                           : plan.popular
-                          ? 'bg-gradient-to-r from-primary-500 to-primary-400 hover:from-primary-600 hover:to-primary-500 text-white'
+                          ? 'bg-gradient-to-r from-primary-500 to-primary-400 hover:from-primary-600 hover:to-primary-500 text-white shadow-lg shadow-primary-500/20'
                           : 'bg-dark-700 hover:bg-dark-600 text-white'
-                      }`}
-                      disabled={plan.current}
+                      } ${saving && plan.name === 'Pro' ? 'opacity-50 cursor-wait' : ''}`}
+                      disabled={plan.current || (saving && plan.name === 'Pro')}
                     >
-                      {plan.current ? 'Current Plan' : plan.name === 'Student' ? 'Student Only' : 'Upgrade'}
+                      {plan.current ? (
+                        <>
+                          <FaCheck />
+                          Current Plan
+                        </>
+                      ) : saving && plan.name === 'Pro' ? (
+                        <>
+                          <FaSpinner className="animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          {plan.name === 'Pro' && <FaCrown />}
+                          {plan.name === 'Student' ? 'Student Only' : 'Upgrade'}
+                        </>
+                      )}
                     </button>
                   </div>
                 ))}

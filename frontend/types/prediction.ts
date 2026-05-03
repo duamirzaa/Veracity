@@ -4,6 +4,7 @@ export interface RiskFeature {
   feature_value: number
   impact: 'positive' | 'negative'
   abs_shap_value?: number
+  mitigation_advice?: string
 }
 
 export interface Metrics {
@@ -45,6 +46,11 @@ export interface Prediction {
   file_path: string
   metrics: Metrics
   created_at: string
+  mitigation_advice?: {
+    message?: string
+    recommendations?: string[]
+    [key: string]: any
+  }
 }
 
 // CORRECT - title is a string ✅

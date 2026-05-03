@@ -3,7 +3,7 @@ import { useState, useRef, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import DashboardLayout from '@/components/Layout/DashboardLayout'
 import ChatbotPanel from '@/components/ChatbotPanel'
-import { FaUpload, FaGithub, FaCode, FaExclamationTriangle, FaCheckCircle, FaFile, FaComments, FaSpinner } from 'react-icons/fa'
+import { FaUpload, FaGithub, FaCode, FaExclamationTriangle, FaCheckCircle, FaFile, FaComments, FaSpinner, FaRobot, FaLightbulb } from 'react-icons/fa'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import type { Prediction } from '@/types/prediction'
@@ -358,6 +358,11 @@ function AnalysisContent() {
                         <div>
                           <p className="text-white font-semibold">{feature.feature_name}</p>
                           <p className="text-sm text-gray-400">Value: {feature.feature_value}</p>
+                          {feature.mitigation_advice && (
+                            <div className="mt-2 text-xs text-primary-300 bg-primary-500/10 py-1.5 px-3 rounded-md border border-primary-500/20 max-w-sm lg:max-w-md italic">
+                              {feature.mitigation_advice}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className="text-right">
@@ -376,7 +381,103 @@ function AnalysisContent() {
                 </div>
               </div>
 
-              {/* Code Display */}
+              {/* Mitigation Strategies */}
+              <div className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 border border-dark-700/50">
+                <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <FaLightbulb className="text-yellow-400" />
+                  AI Mitigation Strategies
+                </h2>
+                
+                {prediction.mitigation_advice && (typeof prediction.mitigation_advice === 'string' || Object.keys(prediction.mitigation_advice).length > 0) ? (
+                  <div className="space-y-4">
+                    {typeof prediction.mitigation_advice === 'string' ? (
+                      <div className="text-gray-300 text-sm leading-relaxed bg-dark-700/30 p-4 rounded-lg border border-dark-600/50 italic">
+                        {prediction.mitigation_advice}
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {Object.entries(prediction.mitigation_advice).map(([key, value], idx) => {
+                          if (!value) return null;
+
+                          // Handle standard fields
+                          if (key === 'message' || key === 'reply' || key === 'advice') {
+                            return (
+                              <div key={idx} className="text-gray-300 text-sm leading-relaxed bg-dark-700/30 p-4 rounded-lg border border-dark-600/50 italic">
+                                {String(value)}
+                              </div>
+                            );
+                          }
+
+                          // Handle arrays (like messages or quick_replies)
+                          if (Array.isArray(value)) {
+                            if (key === 'quick_replies') {
+                              return (
+                                <div key={idx} className="mt-4">
+                                  <span className="text-xs font-bold text-gray-500 uppercase block mb-2 ml-1">Suggested Questions</span>
+                                  <div className="flex flex-wrap gap-2">
+                                    {value.map((reply: string, rIdx: number) => (
+                                      <button
+                                        key={rIdx}
+                                        onClick={() => {
+                                          setChatbotOpen(true);
+                                          // Note: In a real app, we'd pass this to the chatbot component
+                                        }}
+                                        className="text-xs bg-dark-700 hover:bg-dark-600 text-primary-400 py-1.5 px-3 rounded-full border border-dark-600 transition-colors"
+                                      >
+                                        {reply}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <div key={idx} className="space-y-2">
+                                <span className="text-xs font-bold text-gray-500 uppercase block ml-1">{key}</span>
+                                <ul className="space-y-3">
+                                  {value.map((item: any, iIdx: number) => {
+                                    // Extract text from potential message objects
+                                    const text = typeof item === 'string' ? item : (item.content || item.text || item.message || item.reply);
+                                    if (!text) return null;
+                                    
+                                    return (
+                                      <li key={iIdx} className="flex items-start gap-3 text-sm text-gray-300 bg-dark-700/20 p-3 rounded-lg border border-dark-600/30">
+                                        <FaRobot className="text-primary-500 mt-0.5 flex-shrink-0" />
+                                        <span>{text}</span>
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              </div>
+                            );
+                          }
+
+                          // Handle generic key-value pairs (e.g., metric names)
+                          return (
+                            <div key={idx} className="bg-dark-700/30 p-4 rounded-lg border border-dark-600/50">
+                              <span className="text-xs font-bold text-primary-400 uppercase mb-2 block">{key}</span>
+                              <p className="text-sm text-gray-300 italic leading-relaxed">{String(value)}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-gray-400 text-sm mb-4">No specific mitigation strategies found for these metrics.</p>
+                    <button
+                      onClick={() => setChatbotOpen(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-dark-700 hover:bg-dark-600 text-primary-400 hover:text-primary-300 rounded-lg transition-colors border border-dark-600 text-sm"
+                    >
+                      <FaComments />
+                      Consult AI Assistant
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <div className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 border border-dark-700/50">
                 <h2 className="text-lg font-semibold text-white mb-4">Analyzed Code</h2>
                 <div className="rounded-lg overflow-hidden">
@@ -415,7 +516,7 @@ function AnalysisContent() {
       <ChatbotPanel
         isOpen={chatbotOpen}
         onClose={() => setChatbotOpen(false)}
-        predictionId={prediction?.id}
+        projectId={projectId ? parseInt(projectId) : prediction?.id}
       />
     </DashboardLayout>
   )

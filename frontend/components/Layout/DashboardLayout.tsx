@@ -15,7 +15,9 @@ import {
   FaTimes,
   FaComments,
   FaShieldAlt,
+  FaCrown,
 } from 'react-icons/fa'
+import Link from 'next/link'
 import HeaderActions from './HeaderActions'
 
 interface DashboardLayoutProps {
@@ -158,10 +160,29 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               {navigation.find((item) => isActive(item.href))?.name || 'Dashboard'}
             </h2>
             <div className="flex items-center gap-4">
-              {user?.tier === 'pro' && (
-                <span className="px-3 py-1 bg-primary-500/20 text-primary-400 text-xs font-semibold rounded-full">
-                  PRO
-                </span>
+              {user?.tier === 'pro' || user?.role === 'admin' ? (
+                <div className="flex items-center gap-2 px-3 py-1 bg-primary-500/10 border border-primary-500/30 rounded-full">
+                  <FaCrown className="text-[10px] text-primary-400" />
+                  <span className="text-[10px] text-primary-400 font-bold uppercase tracking-widest">
+                    {user?.role === 'admin' ? 'Admin Access' : 'Pro Plan'}
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <div className="hidden md:flex items-center gap-3 px-3 py-1 bg-dark-700/50 rounded-full border border-dark-600/50">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Credits:</span>
+                      <span className="text-[10px] text-white font-bold">10/10</span>
+                    </div>
+                  </div>
+                  <Link
+                    href="/pricing"
+                    className="px-4 py-1.5 bg-primary-500 hover:bg-primary-600 text-dark-900 text-xs font-bold rounded-lg transition-all shadow-lg shadow-primary-500/20 flex items-center gap-2"
+                  >
+                    <FaCrown className="text-[10px]" />
+                    Upgrade
+                  </Link>
+                </>
               )}
               <HeaderActions />
             </div>
