@@ -20,8 +20,8 @@ export const createPaymentSession = async (plan: 'pro'): Promise<PaymentCreateRe
     const origin = typeof window !== 'undefined' ? window.location.origin : ''
     const response = await apiClient.post<PaymentCreateResponse>('/payment/create', { 
       plan,
-      return_url: `${origin}/payment/success`,
-      cancel_url: `${origin}/payment/cancel`
+      return_url: 'https://veracity-delta.vercel.app/payment/success',
+      cancel_url: 'https://veracity-delta.vercel.app/payment/cancel'
     })
     return response.data
   } catch (error) {
