@@ -15,9 +15,10 @@ export interface ChatLimit {
 
 interface StartChatResponse {
   session_id: string
-  message: string        // ← string hai, ChatMessage nahi
-  context: object
-  limit: ChatLimit
+  message: string
+  context?: object
+  limit?: ChatLimit
+  conversation?: any
 }
 
 interface SendMessageResponse {
@@ -31,12 +32,20 @@ interface SendMessageResponse {
  * POST /api/chat/start
  */
 export const startChat = async (
-  projectId?: number | string
+  projectId?: number | string,
+  risk_level?: string,
+  top_features?: any[]
 ): Promise<StartChatResponse> => {
   const session_id = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   const response = await apiClient.post<StartChatResponse>('/chat/start', {
     session_id,
     project_id: projectId || null,
+    risk_level,
+    top_features: top_features?.map(f => ({
+      feature: f.feature_name || f.feature,
+      shap_value: f.shap_value,
+      metric_value: f.feature_value || f.metric_value
+    }))
   })
   return { ...response.data, session_id }
 }

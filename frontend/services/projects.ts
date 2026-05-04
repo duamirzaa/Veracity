@@ -231,3 +231,27 @@ export const deleteProject = async (id: number): Promise<void> => {
     throw error
   }
 }
+
+export interface MitigationStrategy {
+  feature_name: string
+  mitigation_advice: string | null
+  has_advice: boolean
+}
+
+export interface MitigationResponse {
+  has_advice: boolean
+  strategies: MitigationStrategy[]
+}
+
+/**
+ * Get project mitigation advice
+ * GET /api/projects/:id/mitigation
+ */
+export const getProjectMitigation = async (projectId: number): Promise<MitigationResponse> => {
+  try {
+    const response = await apiClient.get<MitigationResponse>(`/projects/${projectId}/mitigation`)
+    return response.data
+  } catch (error) {
+    throw error
+  }
+}

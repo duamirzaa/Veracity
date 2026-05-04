@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { updateProfile } from '@/services/auth'
 import { createPaymentSession } from '@/services/payment'
 import { FaUser, FaCreditCard, FaBell, FaShieldAlt, FaCheck, FaSpinner, FaCrown } from 'react-icons/fa'
+import { getErrorMessage } from '@/utils/error-handler'
 
 export default function SettingsPage() {
   const { user, updateUser } = useAuth()
@@ -88,8 +89,7 @@ export default function SettingsPage() {
       setSaveSuccess(true)
     } catch (err: any) {
       console.error('Failed to save profile:', err)
-      const message = err?.response?.data?.error || err?.message || 'Failed to save changes'
-      setSaveError(message)
+      setSaveError(getErrorMessage(err, 'Failed to save changes'))
     } finally {
       setSaving(false)
     }
@@ -115,7 +115,7 @@ export default function SettingsPage() {
       setPassSuccess(true)
       setPasswords({ new_password: '', confirm_password: '' })
     } catch (err: any) {
-      setPassError(err?.response?.data?.error || 'Failed to update password')
+      setPassError(getErrorMessage(err, 'Failed to update password'))
     } finally {
       setSaving(false)
     }
@@ -136,45 +136,47 @@ export default function SettingsPage() {
 
   const plans = [
     {
+      name: 'Student',
+      price: 'Free',
+      period: '',
+      description: 'Ideal for learning and academic projects',
+      features: [
+        '5 project creation limit',
+        'Basic SHAP explanations',
+        'Email support',
+        'Community access',
+        'Free PDF reports',
+      ],
+      current: user?.role === 'student',
+    },
+    {
       name: 'Free',
       price: '$0',
-      period: 'month',
+      period: '',
+      description: 'Great for getting started with defect prediction',
       features: [
-        'Basic code analysis',
-        'Limited predictions per month',
-        'JSON/XML reports',
+        '5 project creation limit',
+        'Basic SHAP explanations',
         'Community support',
+        'JSON/XML reports',
       ],
-      current: user?.tier === 'free',
+      current: user?.tier === 'free' && user?.role !== 'student',
     },
     {
       name: 'Pro',
       price: '$29',
       period: 'month',
+      description: 'Advanced features for professional developers',
       features: [
-        'Unlimited code analysis',
-        'Unlimited predictions',
-        'PDF report generation',
-        'Priority support',
-        'Advanced analytics',
-        'SHAP explainability',
-        'Chatbot support',
+        'Unlimited code analyses',
+        'Detailed PDF reports',
+        'Priority AI support',
+        'Full analytics dashboard',
+        'API access',
+        'Dynamic mitigation strategies',
       ],
       current: user?.tier === 'pro',
       popular: true,
-    },
-    {
-      name: 'Student',
-      price: '$0',
-      period: 'month',
-      features: [
-        'Everything in Free',
-        'PDF report generation',
-        'SHAP explainability',
-        'Chatbot support',
-        'Academic use',
-      ],
-      current: user?.role === 'student',
     },
   ]
 
@@ -334,6 +336,9 @@ export default function SettingsPage() {
                         <span className="text-3xl font-bold text-white">{plan.price}</span>
                         {plan.period && <span className="text-gray-400 ml-2">/{plan.period}</span>}
                       </div>
+                      {plan.description && (
+                        <p className="text-gray-400 text-sm mt-2">{plan.description}</p>
+                      )}
                     </div>
                     <ul className="space-y-3 mb-6">
                       {plan.features.map((feature, index) => (
@@ -344,7 +349,12 @@ export default function SettingsPage() {
                       ))}
                     </ul>
                     <button
-                      onClick={plan.name === 'Pro' ? handleUpgrade : undefined}
+                      onClick={() => {
+                        if (plan.name === 'Pro') handleUpgrade();
+                        if (plan.name === 'Student') {
+                          alert("To access student benefits, please register a new account using your institution's academic email.");
+                        }
+                      }}
                       className={`w-full py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${plan.current
                           ? 'bg-dark-700 text-gray-400 cursor-not-allowed'
                           : plan.popular
@@ -366,7 +376,7 @@ export default function SettingsPage() {
                       ) : (
                         <>
                           {plan.name === 'Pro' && <FaCrown />}
-                          {plan.name === 'Student' ? 'Student Only' : 'Upgrade'}
+                          {plan.name === 'Student' ? 'Verify Academic Status' : 'Upgrade'}
                         </>
                       )}
                     </button>

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { FaChartLine, FaSpinner, FaInbox, FaChevronLeft, FaChevronRight, FaArrowLeft } from 'react-icons/fa'
 import { useAuth } from '@/contexts/AuthContext'
 import { getPredictions } from '@/services/predictions'
+import * as projectsService from '@/services/projects'
 
 export default function PredictionsPage() {
   const { user } = useAuth()
@@ -22,10 +23,21 @@ export default function PredictionsPage() {
       try {
         setLoading(true)
         setError(null)
-        const data = await getPredictions(page, limit)
-        setPredictions(data.predictions || [])
-        setTotal(data.total || 0)
-        setTotalPages(data.page || Math.ceil((data.total || 0) / limit))
+        
+        // Fetch projects to filter out archived ones on frontend
+        const [projectsData, predictionsData] = await Promise.all([
+          projectsService.getProjects(1, 100),
+          getPredictions(page, limit * 2) // Fetch more to allow for filtering
+        ])
+        
+        const activeProjectIds = new Set(projectsData.projects.map(p => p.id))
+        const filtered = (predictionsData.predictions || [])
+          .filter(p => activeProjectIds.has(p.project_id))
+          .slice(0, limit)
+          
+        setPredictions(filtered)
+        setTotal(filtered.length) // Adjusted total for the filtered view
+        setTotalPages(Math.ceil(filtered.length / limit))
       } catch (err) {
         console.error('Failed to fetch predictions:', err)
         setError('Failed to load predictions')

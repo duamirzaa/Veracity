@@ -9,10 +9,12 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import type { Prediction } from '@/types/prediction'
 import { predictionsService } from '@/services/predictions'
+import MitigationAdvice from '@/components/MitigationAdvice'
 
 // Mock prediction data - fallback only
 const mockPredictionData: Prediction = {
   id: 1,
+  project_id: 1,
   defect_probability: 0.75,
   risk_level: 'high',
   file_path: 'payment_processor.py',
@@ -57,7 +59,7 @@ const mockPredictionData: Prediction = {
     'ev(g)': 9.2,
     'iv(g)': 6.8,
     "n": 312,
-    "v" : 1840.5,
+    "v": 1840.5,
     "l": 0.02,
     "d": 58.3,
     "i": 31.5,
@@ -223,11 +225,10 @@ export default function PredictionDetailPage() {
               >
                 <div className="flex items-center gap-4">
                   <div
-                    className={`w-12 h-12 rounded-lg flex items-center justify-center font-bold ${
-                      feature.impact === 'positive'
+                    className={`w-12 h-12 rounded-lg flex items-center justify-center font-bold ${feature.impact === 'positive'
                         ? 'bg-red-500/20 text-red-400'
                         : 'bg-green-500/20 text-green-400'
-                    }`}
+                      }`}
                   >
                     {index + 1}
                   </div>
@@ -243,9 +244,8 @@ export default function PredictionDetailPage() {
                 </div>
                 <div className="text-right">
                   <p
-                    className={`font-semibold ${
-                      feature.shap_value > 0 ? 'text-red-400' : 'text-green-400'
-                    }`}
+                    className={`font-semibold ${feature.shap_value > 0 ? 'text-red-400' : 'text-green-400'
+                      }`}
                   >
                     {feature.shap_value > 0 ? '+' : ''}
                     {feature.shap_value.toFixed(4)}
@@ -258,114 +258,114 @@ export default function PredictionDetailPage() {
         </div>
 
         {/* Mitigation Strategies */}
-        <div className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 border border-dark-700/50">
-          <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-            <FaLightbulb className="text-yellow-400" />
-            AI Mitigation Strategies
-          </h2>
-          
-          {prediction.mitigation_advice && (typeof prediction.mitigation_advice === 'string' || Object.keys(prediction.mitigation_advice).length > 0) ? (
-            <div className="space-y-4">
-              {typeof prediction.mitigation_advice === 'string' ? (
-                <div className="text-gray-300 text-sm leading-relaxed bg-dark-700/30 p-4 rounded-lg border border-dark-600/50 italic">
-                  {prediction.mitigation_advice}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {Object.entries(prediction.mitigation_advice).map(([key, value], idx) => {
-                    if (!value) return null;
+        {prediction.project_id ? (
+          <MitigationAdvice projectId={prediction.project_id} />
+        ) : (
+          <div className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 border border-dark-700/50">
+            <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+              <FaLightbulb className="text-yellow-400" />
+              AI Mitigation Strategies
+            </h2>
 
-                    // Handle standard fields
-                    if (key === 'message' || key === 'reply' || key === 'advice') {
-                      return (
-                        <div key={idx} className="text-gray-300 text-sm leading-relaxed bg-dark-700/30 p-4 rounded-lg border border-dark-600/50 italic">
-                          {String(value)}
-                        </div>
-                      );
-                    }
+            {prediction.mitigation_advice && (typeof prediction.mitigation_advice === 'string' || Object.keys(prediction.mitigation_advice).length > 0) ? (
+              <div className="space-y-4">
+                {typeof prediction.mitigation_advice === 'string' ? (
+                  <div className="text-gray-300 text-sm leading-relaxed bg-dark-700/30 p-4 rounded-lg border border-dark-600/50 italic">
+                    {prediction.mitigation_advice}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {Object.entries(prediction.mitigation_advice).map(([key, value], idx) => {
+                      if (!value) return null;
 
-                    // Handle arrays (like messages or quick_replies)
-                    if (Array.isArray(value)) {
-                      if (key === 'quick_replies') {
+                      // Handle standard fields
+                      if (key === 'message' || key === 'reply' || key === 'advice') {
                         return (
-                          <div key={idx} className="mt-4">
-                            <span className="text-xs font-bold text-gray-500 uppercase block mb-2 ml-1">Suggested Questions</span>
-                            <div className="flex flex-wrap gap-2">
-                              {value.map((reply: string, rIdx: number) => (
-                                <button
-                                  key={rIdx}
-                                  onClick={() => {
-                                    setChatbotOpen(true);
-                                  }}
-                                  className="text-xs bg-dark-700 hover:bg-dark-600 text-primary-400 py-1.5 px-3 rounded-full border border-dark-600 transition-colors"
-                                >
-                                  {reply}
-                                </button>
-                              ))}
-                            </div>
+                          <div key={idx} className="text-gray-300 text-sm leading-relaxed bg-dark-700/30 p-4 rounded-lg border border-dark-600/50 italic">
+                            {String(value)}
                           </div>
                         );
                       }
 
+                      // Handle arrays (like messages or quick_replies)
+                      if (Array.isArray(value)) {
+                        if (key === 'quick_replies') {
+                          return (
+                            <div key={idx} className="mt-4">
+                              <span className="text-xs font-bold text-gray-500 uppercase block mb-2 ml-1">Suggested Questions</span>
+                              <div className="flex flex-wrap gap-2">
+                                {value.map((reply: string, rIdx: number) => (
+                                  <button
+                                    key={rIdx}
+                                    onClick={() => {
+                                      setChatbotOpen(true);
+                                    }}
+                                    className="text-xs bg-dark-700 hover:bg-dark-600 text-primary-400 py-1.5 px-3 rounded-full border border-dark-600 transition-colors"
+                                  >
+                                    {reply}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div key={idx} className="space-y-2">
+                            <span className="text-xs font-bold text-gray-500 uppercase block ml-1">{key}</span>
+                            <ul className="space-y-3">
+                              {value.map((item: any, iIdx: number) => {
+                                // Extract text from potential message objects
+                                let text = typeof item === 'string' ? item : (item.content || item.text || item.message || item.reply);
+                                if (!text) return null;
+
+                                // Handle dynamic risk level correction for system messages
+                                if (item.type === 'system' && text.includes('HIGH RISK')) {
+                                  const actualRisk = prediction.risk_level.toUpperCase();
+                                  if (actualRisk !== 'HIGH') {
+                                    text = text.replace('HIGH RISK', `${actualRisk} RISK`);
+                                  }
+                                }
+
+                                return (
+                                  <li key={iIdx} className="flex items-start gap-3 text-sm text-gray-300 bg-dark-700/20 p-3 rounded-lg border border-dark-600/30">
+                                    <FaRobot className="text-primary-500 mt-0.5 flex-shrink-0" />
+                                    <span>{text}</span>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </div>
+                        );
+                      }
+
+                      // Handle generic key-value pairs (e.g., metric names)
                       return (
-                        <div key={idx} className="space-y-2">
-                          <span className="text-xs font-bold text-gray-500 uppercase block ml-1">{key}</span>
-                          <ul className="space-y-3">
-                            {value.map((item: any, iIdx: number) => {
-                              // Extract text from potential message objects
-                              const text = typeof item === 'string' ? item : (item.content || item.text || item.message || item.reply);
-                              if (!text) return null;
-                              
-                              return (
-                                <li key={iIdx} className="flex items-start gap-3 text-sm text-gray-300 bg-dark-700/20 p-3 rounded-lg border border-dark-600/30">
-                                  <FaRobot className="text-primary-500 mt-0.5 flex-shrink-0" />
-                                  <span>{text}</span>
-                                </li>
-                              );
-                            })}
-                          </ul>
+                        <div key={idx} className="bg-dark-700/30 p-4 rounded-lg border border-dark-600/50">
+                          <span className="text-xs font-bold text-primary-400 uppercase mb-2 block">{key}</span>
+                          <p className="text-sm text-gray-300 italic leading-relaxed">{String(value)}</p>
                         </div>
                       );
-                    }
-
-                    // Handle generic key-value pairs (e.g., metric names)
-                    return (
-                      <div key={idx} className="bg-dark-700/30 p-4 rounded-lg border border-dark-600/50">
-                        <span className="text-xs font-bold text-primary-400 uppercase mb-2 block">{key}</span>
-                        <p className="text-sm text-gray-300 italic leading-relaxed">{String(value)}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-gray-400 text-sm mb-4">No specific mitigation strategies found for these metrics.</p>
-              <button
-                onClick={() => setChatbotOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-dark-700 hover:bg-dark-600 text-primary-400 hover:text-primary-300 rounded-lg transition-colors border border-dark-600 text-sm"
-              >
-                <FaComments />
-                Consult AI Assistant
-              </button>
-            </div>
-          )}
-        </div>
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-gray-400 text-sm mb-4">No specific mitigation strategies found for these metrics.</p>
+                <button
+                  onClick={() => setChatbotOpen(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-dark-700 hover:bg-dark-600 text-primary-400 hover:text-primary-300 rounded-lg transition-colors border border-dark-600 text-sm"
+                >
+                  <FaComments />
+                  Consult AI Assistant
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Code Display - Same as Analysis Page */}
-        <div className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 border border-dark-700/50">
-          <h2 className="text-xl font-semibold text-white mb-4">Analyzed Code</h2>
-          <div className="rounded-lg overflow-hidden">
-            <SyntaxHighlighter
-              language="python"
-              style={vscDarkPlus}
-              customStyle={{ margin: 0, borderRadius: '8px' }}
-            >
-              {prediction.code_snippet}
-            </SyntaxHighlighter>
-          </div>
-        </div>
 
         {/* Chatbot Support */}
         <div className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 border border-dark-700/50">
@@ -390,6 +390,8 @@ export default function PredictionDetailPage() {
         isOpen={chatbotOpen}
         onClose={() => setChatbotOpen(false)}
         projectId={prediction.id}
+        risk_level={prediction.risk_level}
+        top_features={prediction.top_risk_features}
       />
     </DashboardLayout>
   )

@@ -50,7 +50,29 @@ export const getPredictions = async (page: number = 1, limit: number = 10): Prom
 export const getPredictionById = async (id: number): Promise<Prediction> => {
   try {
     const response = await apiClient.get<Prediction>(`/predictions/${id}`)
-    return response.data
+    const prediction = response.data
+
+    // Fallback: If mitigation_advice is missing, fetch it from chatbot start
+    if (prediction && (!prediction.mitigation_advice || Object.keys(prediction.mitigation_advice).length === 0)) {
+      try {
+        const chatResponse = await apiClient.post('/chat/start', {
+          session_id: `fallback-${prediction.id}-${Date.now()}`,
+          risk_level: prediction.risk_level || 'medium',
+          top_features: (prediction.top_risk_features || []).map(f => ({
+            feature: f.feature_name,
+            shap_value: f.shap_value,
+            metric_value: f.feature_value
+          }))
+        })
+        if (chatResponse.data?.conversation) {
+          prediction.mitigation_advice = chatResponse.data.conversation
+        }
+      } catch (chatErr) {
+        console.warn('Fallback advice fetch failed:', chatErr)
+      }
+    }
+
+    return prediction
   } catch (error) {
     throw error
   }

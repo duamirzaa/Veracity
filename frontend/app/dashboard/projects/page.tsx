@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/Layout/DashboardLayout'
 import { useAuth } from '@/contexts/AuthContext'
-import { FaPlus, FaGithub, FaFolder, FaTrash, FaEdit, FaCode, FaSpinner } from 'react-icons/fa'
+import { FaPlus, FaGithub, FaFolder, FaTrash, FaEdit, FaCode, FaSpinner, FaChartLine } from 'react-icons/fa'
 import * as projectsService from '@/services/projects'
 import type { Project } from '@/services/projects'
 import { addNotification } from '@/services/notifications'
+import { getErrorMessage } from '@/utils/error-handler'
 
 
 export default function ProjectsPage() {
@@ -93,7 +94,7 @@ export default function ProjectsPage() {
       window.dispatchEvent(new CustomEvent('project-created'))
     } catch (err) {
       console.error('Failed to create project:', err)
-      setError('Failed to create project')
+      setError(getErrorMessage(err, 'Failed to create project'))
     }
     finally {
     setSubmitting(false)  // ← stop loading always
@@ -245,9 +246,16 @@ export default function ProjectsPage() {
 
               <button
                 onClick={() => handleAnalyze(project.id)}
-                className="w-full mt-4 bg-dark-700 hover:bg-dark-600 text-white py-2 rounded-lg transition-colors"
+                className="w-full mt-4 bg-dark-700 hover:bg-dark-600 text-white py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
               >
-                Analyze Code
+                {project.latest_prediction_id ? (
+                  <>
+                    <FaChartLine className="text-xs text-primary-400" />
+                    View Analysis
+                  </>
+                ) : (
+                  'Analyze Code'
+                )}
               </button>
             </div>
             ))

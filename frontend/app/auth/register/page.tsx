@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { FaGithub, FaGoogle, FaMicrosoft, FaShieldAlt, FaChartLine, FaRobot } from 'react-icons/fa'
 import Link from 'next/link'
+import { getErrorMessage } from '@/utils/error-handler'
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -61,7 +62,7 @@ export default function RegisterPage() {
         router.push('/auth/login')
       }, 3000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed')
+      setError(getErrorMessage(err, 'Registration failed'))
     } finally {
       setLoading(false)
     }

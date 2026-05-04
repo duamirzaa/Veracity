@@ -28,12 +28,29 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedState = localStorage.getItem('sidebarOpen')
+      if (savedState !== null) {
+        return savedState === 'true'
+      }
+    }
+    return true
+  })
+  
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false)
   const [projectCount, setProjectCount] = useState(0)
   const { user, logout, loading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
+
+  const toggleSidebar = () => {
+    const newState = !sidebarOpen
+    setSidebarOpen(newState)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sidebarOpen', String(newState))
+    }
+  }
 
   const fetchProjectCount = async () => {
     if (user && user.tier !== 'pro') {
@@ -132,7 +149,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       />
     )}
   </Link>
-  <button onClick={() => setSidebarOpen(!sidebarOpen)} className="...">
+  <button onClick={toggleSidebar} className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-dark-700/50 transition-colors">
     {sidebarOpen ? <FaTimes /> : <FaBars />}
   </button>
 </div>
@@ -143,7 +160,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             const Icon = item.icon
             const active = isActive(item.href)
             return (
-              <a
+              <Link
                 key={item.name}
                 href={item.href}
                 className={`group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
@@ -154,7 +171,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               >
                 <Icon className={`text-lg flex-shrink-0 ${active ? 'text-white' : 'group-hover:text-primary-400'}`} />
                 {sidebarOpen && <span className="font-medium">{item.name}</span>}
-              </a>
+              </Link>
             )
           })}
         </nav>

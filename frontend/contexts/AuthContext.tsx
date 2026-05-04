@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import Cookies from 'js-cookie'
 import * as authService from '@/services/auth'
+import { getErrorMessage } from '@/utils/error-handler'
 
 export type UserRole = 'user' | 'project_manager' | 'admin' | 'student'
 export type UserTier = 'free' | 'pro'
@@ -78,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       Cookies.set('auth_token', response.token, { expires: 7 })
       Cookies.set('auth_user', JSON.stringify(response.user), { expires: 7 })
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Login failed'
+      const errorMessage = getErrorMessage(err, 'Login failed')
       setError(errorMessage)
       throw new Error(errorMessage)
     } finally {
@@ -99,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       // Registration successful - user must login after
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Registration failed'
+      const errorMessage = getErrorMessage(err, 'Registration failed')
       setError(errorMessage)
       throw new Error(errorMessage)
     } finally {

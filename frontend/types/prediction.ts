@@ -39,6 +39,7 @@ export interface Metrics {
 
 export interface Prediction {
   id: number
+  project_id: number
   defect_probability: number
   risk_level: 'low' | 'medium' | 'high' | 'critical'
   top_risk_features: RiskFeature[]

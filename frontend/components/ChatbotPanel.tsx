@@ -16,9 +16,11 @@ interface ChatbotPanelProps {
   isOpen: boolean
   onClose: () => void
   projectId?: number | string
+  risk_level?: string
+  top_features?: any[]
 }
 
-export default function ChatbotPanel({ isOpen, onClose, projectId }: ChatbotPanelProps) {
+export default function ChatbotPanel({ isOpen, onClose, projectId, risk_level, top_features }: ChatbotPanelProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -51,9 +53,22 @@ export default function ChatbotPanel({ isOpen, onClose, projectId }: ChatbotPane
     setStarted(true)
     setLoading(true)
     try {
-      const data = await startChat(projectId)
+      const data = await startChat(projectId, risk_level, top_features)
       setSessionId(data.session_id)
-      setMessages([{ id: 1, type: 'bot', content: data.message, timestamp: new Date() }])
+      
+      // If the backend returns a conversation object, use it
+      if (data.conversation?.messages) {
+        const initialMessages = data.conversation.messages.map((m: any, idx: number) => ({
+          id: idx + 1,
+          type: 'bot',
+          content: m.text || m.content || String(m),
+          timestamp: new Date()
+        }));
+        setMessages(initialMessages);
+      } else {
+        setMessages([{ id: 1, type: 'bot', content: data.message || "Hello! I'm Vera, your code assistant.", timestamp: new Date() }])
+      }
+      
       if (data.limit) setLimit(data.limit)
     } catch (err) {
       setMessages([{ id: 1, type: 'bot', content: "Hello! I'm Vera, your code assistant. How can I help you?", timestamp: new Date() }])

@@ -20,6 +20,7 @@ import {
 } from 'recharts'
 import * as dashboardService from '@/services/dashboard'
 import { getPredictions } from '@/services/predictions'
+import * as projectsService from '@/services/projects'
 
 export default function DashboardPage() {
   const { isAuthenticated, user, loading: authLoading } = useAuth()
@@ -66,8 +67,19 @@ export default function DashboardPage() {
       if (!isAuthenticated) return
       try {
         setPredictionsLoading(true)
-        const data = await getPredictions(1, 5)
-        setRecentPredictions(data.predictions || [])
+        
+        // Fetch projects first to filter out archived ones on frontend
+        const [projectsData, predictionsData] = await Promise.all([
+          projectsService.getProjects(1, 100),
+          getPredictions(1, 20) // Fetch more to allow for filtering
+        ])
+        
+        const activeProjectIds = new Set(projectsData.projects.map(p => p.id))
+        const filtered = (predictionsData.predictions || [])
+          .filter(p => activeProjectIds.has(p.project_id))
+          .slice(0, 5) // Keep only 5 for dashboard
+          
+        setRecentPredictions(filtered)
       } catch (err) {
         console.error('Failed to fetch recent predictions:', err)
         setRecentPredictions([])

@@ -12,38 +12,39 @@ export function PricingSection() {
   const tiers = [
     {
       name: "Student",
-      description: "Perfect for learning",
+      description: "Ideal for learning and academic projects",
       features: [
-        "Basic risk analysis",
-        "5 project submissions/month",
-        "Community support",
-        "Educational resources",
+        "5 project creation limit",
+        "Basic SHAP explanations",
+        "Email support",
+        "Community access",
+        "Free PDF reports",
       ],
-      cta: "Start Learning",
+      cta: "Verify Academic Status",
       popular: false,
     },
     {
       name: "Free",
-      description: "Get started today",
+      description: "Great for getting started with defect prediction",
       features: [
-        "Basic risk analysis",
-        "10 project submissions/month",
-        "Limited insights",
-        "Email support",
+        "5 project creation limit",
+        "Basic SHAP explanations",
+        "Community support",
+        "JSON/XML reports",
       ],
       cta: "Get Started",
       popular: false,
     },
     {
       name: "Pro",
-      description: "For professional teams",
+      description: "Advanced features for professional developers",
       features: [
-        "Detailed reports (PDF)",
-        "Unlimited submissions",
-        "Advanced explanations",
-        "Full analytics access",
-        "Priority support",
+        "Unlimited code analyses",
+        "Detailed PDF reports",
+        "Priority AI support",
+        "Full analytics dashboard",
         "API access",
+        "Dynamic mitigation strategies",
       ],
       cta: "Upgrade Now",
       popular: true,
@@ -107,7 +108,14 @@ export function PricingSection() {
               </ul>
 
               <button
-                onClick={() => router.push("/auth/login")}
+                onClick={() => {
+                  if (tier.name === 'Student') {
+                    alert("To access student benefits, please register a new account using your institution's academic email.");
+                    router.push("/auth/register");
+                  } else {
+                    router.push("/auth/login");
+                  }
+                }}
                 className={`w-full py-4 rounded-full transition-all duration-300 ${
                   tier.popular
                     ? "bg-[#14a085] text-white hover:bg-[#12916f] hover:shadow-[0_0_30px_rgba(20,160,133,0.4)]"

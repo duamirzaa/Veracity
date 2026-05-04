@@ -36,10 +36,15 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid - clear auth
-      Cookies.remove('auth_token')
-      Cookies.remove('auth_user')
-      window.location.href = '/'
+      // Don't redirect if we're already on the login page or trying to login/register
+      const isAuthPath = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/register');
+      
+      if (!isAuthPath) {
+        // Token expired or invalid - clear auth
+        Cookies.remove('auth_token')
+        Cookies.remove('auth_user')
+        window.location.href = '/'
+      }
     }
 
     if (error.response?.status === 403) {
