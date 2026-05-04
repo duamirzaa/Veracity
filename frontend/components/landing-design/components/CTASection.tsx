@@ -58,10 +58,15 @@ export function CTASection() {
             <span className="text-white text-lg" style={{ fontWeight: 600 }}>Get Started</span>
             <ArrowRight className="w-5 h-5 text-white group-hover:translate-x-1 transition-transform duration-300" />
           </button>
-          <button className="px-10 py-5 bg-white/5 backdrop-blur-sm border border-white/10 rounded-full text-white transition-all duration-300 hover:bg-white/10 hover:border-white/20 flex items-center gap-2">
+          <a 
+            href="https://youtu.be/UNJJmSJnM8k" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="px-10 py-5 bg-white/5 backdrop-blur-sm border border-white/10 rounded-full text-white transition-all duration-300 hover:bg-white/10 hover:border-white/20 flex items-center gap-2 inline-flex cursor-pointer"
+          >
             <Play className="w-5 h-5 text-white" />
             <span className="text-lg" style={{ fontWeight: 600 }}>Try Demo</span>
-          </button>
+          </a>
         </motion.div>
       </div>
     </section>

@@ -179,9 +179,15 @@ function Button({ onGetStarted }: HeroNewProps) {
 
 function Button1() {
   return (
-    <button className="bg-[rgba(255,255,255,0.05)] border border-white/10 rounded-full px-6 sm:px-8 md:px-10 py-2.5 sm:py-3 md:py-3 text-white text-sm sm:text-base font-semibold transition hover:bg-white/10 hover:border-white/20" data-name="Button">
+    <a 
+      href="https://youtu.be/UNJJmSJnM8k" 
+      target="_blank" 
+      rel="noopener noreferrer"
+      className="bg-[rgba(255,255,255,0.05)] border border-white/10 rounded-full px-6 sm:px-8 md:px-10 py-2.5 sm:py-3 md:py-3 text-white text-sm sm:text-base font-semibold transition hover:bg-white/10 hover:border-white/20 inline-block text-center cursor-pointer" 
+      data-name="Button"
+    >
       View Demo
-    </button>
+    </a>
   );
 }
 
