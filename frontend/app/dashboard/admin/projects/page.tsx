@@ -6,6 +6,9 @@ import { useAuth } from '@/contexts/AuthContext'
 import { FaShieldAlt, FaSearch, FaSpinner, FaChevronLeft, FaChevronRight } from 'react-icons/fa'
 import { getAdminProjects } from '@/services/admin'
 import type { AdminProject } from '@/services/admin'
+import { archiveProject, unarchiveProject } from '@/services/projects'
+import { addNotification } from '@/services/notifications'
+import { FaArchive, FaUndo } from 'react-icons/fa'
 
 export default function ProjectRegistryPage() {
   const { user, isAuthenticated } = useAuth()
@@ -13,7 +16,7 @@ export default function ProjectRegistryPage() {
   const [projectsList, setProjectsList] = useState<AdminProject[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Pagination
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
@@ -75,6 +78,35 @@ export default function ProjectRegistryPage() {
       p.email.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  const handleArchive = async (id: number) => {
+    if (!window.confirm('Are you sure you want to archive this project?')) return
+    try {
+      setLoading(true)
+      await archiveProject(id)
+      setProjectsList(prev => prev.map(p => p.project_id === id ? { ...p, is_archived: true } : p))
+      addNotification('Project archived successfully')
+    } catch (err) {
+      console.error('Failed to archive project:', err)
+      setError('Failed to archive project')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleUnarchive = async (id: number) => {
+    try {
+      setLoading(true)
+      await unarchiveProject(id)
+      setProjectsList(prev => prev.map(p => p.project_id === id ? { ...p, is_archived: false } : p))
+      addNotification('Project unarchived successfully')
+    } catch (err) {
+      console.error('Failed to unarchive project:', err)
+      setError('Failed to unarchive project')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -83,7 +115,7 @@ export default function ProjectRegistryPage() {
             <h1 className="text-2xl font-bold text-white">Project Registry</h1>
             <p className="text-gray-400 mt-1">Global view of all projects uploaded by all users</p>
           </div>
-          <button 
+          <button
             onClick={() => loadProjects(page)}
             disabled={loading}
             className="flex items-center gap-2 px-4 py-2 bg-dark-800 hover:bg-dark-700 text-white rounded-lg transition-colors border border-dark-600"
@@ -117,7 +149,7 @@ export default function ProjectRegistryPage() {
         )}
 
         <div className="bg-dark-800/80 backdrop-blur-md rounded-2xl border border-dark-700/50 overflow-hidden shadow-2xl relative">
-          
+
           {loading && (
             <div className="absolute inset-0 z-10 bg-dark-900/50 backdrop-blur-sm flex items-center justify-center">
               <div className="bg-dark-800 p-4 rounded-xl border border-dark-700 flex items-center gap-3 shadow-xl">
@@ -162,23 +194,37 @@ export default function ProjectRegistryPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${
-                            project.is_archived
-                              ? 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
-                              : 'bg-green-500/20 text-green-400 border border-green-500/30'
-                          }`}
+                          className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${project.is_archived
+                            ? 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+                            : 'bg-green-500/20 text-green-400 border border-green-500/30'
+                            }`}
                         >
                           {project.is_archived ? 'Archived' : 'Active'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-400">
-                        {new Date(project.created_at).toLocaleString(undefined, {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                        <div className="flex items-center justify-end gap-2">
+                          {project.is_archived ? (
+                            <button
+                              onClick={() => handleUnarchive(project.project_id)}
+                              className="p-2 text-primary-400 hover:bg-primary-500/10 rounded-lg transition-colors"
+                              title="Unarchive Project"
+                            >
+                              <FaUndo />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleArchive(project.project_id)}
+                              className="p-2 text-orange-400 hover:bg-orange-500/10 rounded-lg transition-colors"
+                              title="Archive Project"
+                            >
+                              <FaArchive />
+                            </button>
+                          )}
+                          <span className="text-gray-500 ml-2">
+                            {new Date(project.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -194,7 +240,7 @@ export default function ProjectRegistryPage() {
               </tbody>
             </table>
           </div>
-          
+
           {/* Pagination Controls */}
           {!loading && totalPages > 1 && (
             <div className="px-6 py-4 bg-dark-900/50 border-t border-dark-700/50 flex items-center justify-between">

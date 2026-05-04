@@ -90,6 +90,24 @@ interface MetricsListResponse {
   metrics: MetricConfig[]
 }
 
+export interface MitigationRule {
+  id: number
+  metric_name: string
+  threshold_low: number
+  threshold_high: number
+  mitigation_advice: string
+  priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
+  is_active: boolean
+  version: number
+  created_at: string
+  updated_at: string
+}
+
+export interface RulesListResponse {
+  rules: MitigationRule[]
+  total: number
+}
+
 /**
  * Get admin dashboard stats
  */
@@ -278,6 +296,45 @@ export const getLogs = async (page: number = 1, limit: number = 10): Promise<Log
 export const updateUserRole = async (userId: number, role: string): Promise<void> => {
   try {
     await apiClient.patch(`/admin/users/${userId}/role`, { role })
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Get mitigation rules
+ * GET /admin/metrics/rules
+ */
+export const getRules = async (): Promise<RulesListResponse> => {
+  try {
+    const response = await apiClient.get<RulesListResponse>('/admin/metrics/rules')
+    return response.data
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Get single mitigation rule
+ * GET /admin/metrics/rules/:id
+ */
+export const getRuleById = async (id: number): Promise<MitigationRule> => {
+  try {
+    const response = await apiClient.get<MitigationRule>(`/admin/metrics/rules/${id}`)
+    return response.data
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Update mitigation rule
+ * PUT /admin/metrics/rules/:id
+ */
+export const updateRule = async (id: number, payload: Partial<MitigationRule>): Promise<MitigationRule> => {
+  try {
+    const response = await apiClient.put<{ message: string, rule: MitigationRule }>(`/admin/metrics/rules/${id}`, payload)
+    return response.data.rule
   } catch (error) {
     throw error
   }

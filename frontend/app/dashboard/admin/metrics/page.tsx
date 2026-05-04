@@ -3,65 +3,41 @@
 import { useState, useEffect } from 'react'
 import DashboardLayout from '@/components/Layout/DashboardLayout'
 import { useAuth } from '@/contexts/AuthContext'
-import { FaShieldAlt, FaSpinner } from 'react-icons/fa'
-import { getMetrics } from '@/services/admin'
-import type { MetricConfig } from '@/services/admin'
-
-const mockMetrics: MetricConfig[] = [
-  {
-    id: 1,
-    name: 'SHAP Threshold',
-    description: 'Minimum SHAP value for feature importance',
-    enabled: true,
-    threshold: 0.1,
-  },
-  {
-    id: 2,
-    name: 'Complexity Threshold',
-    description: 'Maximum cyclomatic complexity allowed',
-    enabled: true,
-    threshold: 10,
-  },
-  {
-    id: 3,
-    name: 'Risk Threshold',
-    description: 'Defect probability threshold for high risk',
-    enabled: true,
-    threshold: 0.7,
-  },
-]
+import { FaShieldAlt, FaSpinner, FaEdit, FaCheck, FaTimes } from 'react-icons/fa'
+import { getRules, updateRule, MitigationRule } from '@/services/admin'
+import { addNotification } from '@/services/notifications'
 
 export default function MetricConfiguratorPage() {
   const { user, isAuthenticated } = useAuth()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [metrics, setMetrics] = useState<MetricConfig[]>(mockMetrics)
-  const [saved, setSaved] = useState(false)
+  const [rules, setRules] = useState<MitigationRule[]>([])
+  
+  // Edit State
+  const [editingRule, setEditingRule] = useState<MitigationRule | null>(null)
+  const [editForm, setEditForm] = useState<Partial<MitigationRule>>({})
+  const [isSaving, setIsSaving] = useState(false)
 
-  // Load metrics on mount
-  useEffect(() => {
-    const loadMetrics = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        const result = await getMetrics()
-        setMetrics(result.metrics)
-      } catch (err) {
-        console.error('Failed to load metrics:', err)
-        setError('Failed to load metrics')
-        // Keep mock data as fallback
-        setMetrics(mockMetrics)
-      } finally {
-        setLoading(false)
-      }
+  const loadRules = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const result = await getRules()
+      setRules(result.rules || [])
+    } catch (err: any) {
+      console.error('Failed to load rules:', err)
+      setError(err?.response?.data?.error || err?.message || 'Failed to load rules')
+    } finally {
+      setLoading(false)
     }
+  }
 
+  useEffect(() => {
     if (isAuthenticated && user?.role === 'admin') {
-      loadMetrics()
+      loadRules()
     }
   }, [isAuthenticated, user])
 
-  // Wait for auth to load
   if (!isAuthenticated || !user) {
     return (
       <DashboardLayout>
@@ -73,7 +49,6 @@ export default function MetricConfiguratorPage() {
     )
   }
 
-  // Only DBA can access
   if (user.role !== 'admin') {
     return (
       <DashboardLayout>
@@ -88,116 +63,229 @@ export default function MetricConfiguratorPage() {
     )
   }
 
-  const handleSave = async () => {
-    // In real app, this would save to backend
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
+  const handleEditClick = (rule: MitigationRule) => {
+    setEditingRule(rule)
+    setEditForm({
+      threshold_low: rule.threshold_low,
+      threshold_high: rule.threshold_high,
+      priority: rule.priority,
+      mitigation_advice: rule.mitigation_advice,
+      is_active: rule.is_active,
+    })
+  }
+
+  const handleCancelEdit = () => {
+    setEditingRule(null)
+    setEditForm({})
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editingRule) return
+    
+    // Validate
+    const low = Number(editForm.threshold_low)
+    const high = Number(editForm.threshold_high)
+    if (!isNaN(low) && !isNaN(high) && low >= high) {
+      addNotification('Error: Threshold Low must be less than Threshold High')
+      return
+    }
+
+    try {
+      setIsSaving(true)
+      const updated = await updateRule(editingRule.id, editForm)
+      
+      setRules(prev => prev.map(r => r.id === updated.id ? updated : r))
+      addNotification(`Rule for ${updated.metric_name} updated successfully`)
+      handleCancelEdit()
+    } catch (err: any) {
+      console.error('Failed to update rule:', err)
+      addNotification(err?.response?.data?.error || err?.message || 'Failed to update rule')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleToggleActive = async (rule: MitigationRule) => {
+    try {
+      const updated = await updateRule(rule.id, { is_active: !rule.is_active })
+      setRules(prev => prev.map(r => r.id === updated.id ? updated : r))
+      addNotification(`Rule ${updated.metric_name} is now ${updated.is_active ? 'active' : 'inactive'}`)
+    } catch (err: any) {
+      console.error('Failed to toggle rule:', err)
+      addNotification(err?.response?.data?.error || err?.message || 'Failed to toggle rule')
+    }
+  }
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'CRITICAL': return 'bg-red-500/20 text-red-400 border-red-500/30'
+      case 'HIGH': return 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+      case 'MEDIUM': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+      case 'LOW': return 'bg-green-500/20 text-green-400 border-green-500/30'
+      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+    }
   }
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">Metric Configurator</h1>
-          <p className="text-gray-400 mt-1">Set thresholds for SHAP and Complexity analysis</p>
+          <h1 className="text-2xl font-bold text-white">Mitigation Rules Configuration</h1>
+          <p className="text-gray-400 mt-1">Manage thresholds and advice for chatbot risk mitigation</p>
         </div>
 
-        {/* Error Display */}
         {error && (
           <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 text-red-400">
             {error}
           </div>
         )}
 
-        {/* Loading State */}
-        {loading && (
+        {loading ? (
           <div className="bg-blue-500/20 border border-blue-500/50 rounded-lg p-4 text-blue-400 flex items-center gap-2">
             <FaSpinner className="animate-spin" />
-            <p>Loading metrics...</p>
+            <p>Loading rules...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {rules.map(rule => (
+              <div key={rule.id} className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 border border-dark-700/50 flex flex-col h-full shadow-lg transition-all hover:border-dark-600">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                      {rule.metric_name}
+                      <span className={`text-xs px-2 py-1 rounded-full border ${getPriorityColor(rule.priority)}`}>
+                        {rule.priority}
+                      </span>
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-1">Version {rule.version}</p>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => handleToggleActive(rule)}
+                      className={`text-xs px-3 py-1 rounded-lg border font-semibold transition-colors ${
+                        rule.is_active 
+                          ? 'bg-primary-500/20 text-primary-400 border-primary-500/30 hover:bg-primary-500/30' 
+                          : 'bg-dark-600/50 text-gray-400 border-dark-500 hover:bg-dark-600'
+                      }`}
+                    >
+                      {rule.is_active ? 'Active' : 'Inactive'}
+                    </button>
+                    <button
+                      onClick={() => handleEditClick(rule)}
+                      className="p-2 text-gray-400 hover:text-white hover:bg-dark-700 rounded-lg transition-colors"
+                      title="Edit Rule"
+                    >
+                      <FaEdit />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-4 p-4 bg-dark-900/50 rounded-lg border border-dark-700/50">
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">Low Threshold</p>
+                    <p className="text-lg font-semibold text-white">{rule.threshold_low}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">High Threshold</p>
+                    <p className="text-lg font-semibold text-white">{rule.threshold_high}</p>
+                  </div>
+                </div>
+
+                <div className="mt-auto">
+                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-2">Mitigation Advice</p>
+                  <p className="text-sm text-gray-300 bg-dark-700/30 p-3 rounded-lg border border-dark-600/30 leading-relaxed italic">
+                    "{rule.mitigation_advice}"
+                  </p>
+                </div>
+              </div>
+            ))}
+            
+            {rules.length === 0 && !loading && (
+               <div className="col-span-full bg-dark-800 rounded-lg border border-dark-700 border-dashed p-12 text-center">
+                 <p className="text-gray-400">No mitigation rules found.</p>
+               </div>
+            )}
           </div>
         )}
 
-        <div className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 border border-dark-700/50">
-          <h2 className="text-xl font-semibold text-white mb-6">Configure Analysis Thresholds</h2>
-          <div className="space-y-8 max-w-3xl">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className="block text-sm font-medium text-gray-300">
-                  SHAP Threshold
-                </label>
-                <span className="text-lg font-bold text-primary-400">{metrics[0]?.threshold ?? 0.1}</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                defaultValue={metrics[0]?.threshold ?? 0.1}
-                className="w-full h-2 bg-dark-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
-              />
-              <p className="text-xs text-gray-400 mt-2">
-                Features with SHAP values above this threshold will be flagged as high-risk drivers
-              </p>
-            </div>
+        {/* Edit Modal */}
+        {editingRule && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="bg-dark-800 rounded-xl border border-dark-700 p-6 w-full max-w-2xl shadow-2xl">
+              <h2 className="text-xl font-bold text-white mb-6">
+                Edit Rule: {editingRule.metric_name}
+              </h2>
+              
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-1">Threshold Low</label>
+                    <input 
+                      type="number"
+                      step="any"
+                      value={editForm.threshold_low ?? ''}
+                      onChange={e => setEditForm({ ...editForm, threshold_low: parseFloat(e.target.value) })}
+                      className="w-full bg-dark-900 border border-dark-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-1">Threshold High</label>
+                    <input 
+                      type="number"
+                      step="any"
+                      value={editForm.threshold_high ?? ''}
+                      onChange={e => setEditForm({ ...editForm, threshold_high: parseFloat(e.target.value) })}
+                      className="w-full bg-dark-900 border border-dark-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary-500"
+                    />
+                  </div>
+                </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className="block text-sm font-medium text-gray-300">
-                  Complexity Threshold
-                </label>
-                <span className="text-lg font-bold text-primary-400">{metrics[1]?.threshold ?? 10}</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="50"
-                step="1"
-                defaultValue={metrics[1]?.threshold ?? 10}
-                className="w-full h-2 bg-dark-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
-              />
-              <p className="text-xs text-gray-400 mt-2">
-                Code with cyclomatic complexity above this value will be marked as high risk
-              </p>
-            </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Priority</label>
+                  <select
+                    value={editForm.priority}
+                    onChange={e => setEditForm({ ...editForm, priority: e.target.value as any })}
+                    className="w-full bg-dark-900 border border-dark-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary-500"
+                  >
+                    <option value="CRITICAL">CRITICAL</option>
+                    <option value="HIGH">HIGH</option>
+                    <option value="MEDIUM">MEDIUM</option>
+                    <option value="LOW">LOW</option>
+                  </select>
+                </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className="block text-sm font-medium text-gray-300">
-                  Risk Threshold
-                </label>
-                <span className="text-lg font-bold text-primary-400">{((metrics[2]?.threshold ?? 0.7) * 100).toFixed(0)}%</span>
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Mitigation Advice</label>
+                  <textarea
+                    rows={4}
+                    value={editForm.mitigation_advice ?? ''}
+                    onChange={e => setEditForm({ ...editForm, mitigation_advice: e.target.value })}
+                    className="w-full bg-dark-900 border border-dark-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary-500"
+                  />
+                </div>
               </div>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                defaultValue={metrics[2]?.threshold ?? 0.7}
-                onChange={(e) => {
-                  const newMetrics = [...metrics]
-                  if (newMetrics[2]) newMetrics[2].threshold = parseFloat(e.target.value)
-                  setMetrics(newMetrics)
-                }}
-                className="w-full h-2 bg-dark-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
-              />
-              <p className="text-xs text-gray-400 mt-2">
-                Overall defect probability above this threshold will trigger critical alerts
-              </p>
-            </div>
 
-            <div className="pt-4 border-t border-dark-700 flex items-center gap-4">
-              <button
-                onClick={handleSave}
-                className="px-6 py-3 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-semibold transition-colors"
-              >
-                Save Configuration
-              </button>
-              {saved && (
-                <span className="text-green-400 text-sm font-medium">Configuration saved successfully!</span>
-              )}
+              <div className="flex items-center justify-end gap-3 mt-8 pt-6 border-t border-dark-700">
+                <button
+                  onClick={handleCancelEdit}
+                  disabled={isSaving}
+                  className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={isSaving}
+                  className="flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-dark-900 font-semibold px-6 py-2 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {isSaving ? <FaSpinner className="animate-spin" /> : <FaCheck />}
+                  Save Changes
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </DashboardLayout>
   )

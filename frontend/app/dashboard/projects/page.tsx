@@ -102,10 +102,12 @@ export default function ProjectsPage() {
   }
 
   const handleDelete = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this project? It will be archived.')) return
     try {
       setError(null)
-      await projectsService.archiveProject(id)
+      await projectsService.deleteProject(id)
       setProjects(projects.filter((p) => p.id !== id))
+      addNotification('Project deleted successfully (archived).')
       window.dispatchEvent(new CustomEvent('project-deleted'))
     } catch (err) {
       console.error('Failed to delete project:', err)

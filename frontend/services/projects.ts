@@ -177,7 +177,7 @@ export const getProjectReport = async (id: number): Promise<any> => {
  */
 export const archiveProject = async (id: number): Promise<Project> => {
   try {
-    const response = await apiClient.patch<{ project: ProjectBackendResponse }>(`/projects/${id}/archive`)
+    const response = await apiClient.patch<{ message: string; project: ProjectBackendResponse }>(`/projects/${id}/archive`)
     return transformProjectFromBackend(response.data.project)
   } catch (error) {
     throw error
@@ -190,7 +190,7 @@ export const archiveProject = async (id: number): Promise<Project> => {
  */
 export const unarchiveProject = async (id: number): Promise<Project> => {
   try {
-    const response = await apiClient.patch<{ project: ProjectBackendResponse }>(`/projects/${id}/unarchive`)
+    const response = await apiClient.patch<{ message: string; project: ProjectBackendResponse }>(`/projects/${id}/unarchive`)
     return transformProjectFromBackend(response.data.project)
   } catch (error) {
     throw error
@@ -222,11 +222,13 @@ export const generateProjectReport = async (projectId: number) => {
 }
 
 /**
- * Delete project (deprecated - use archiveProject instead)
+ * Soft-delete (archive) project
+ * DELETE /api/projects/:id
  */
-export const deleteProject = async (id: number): Promise<void> => {
+export const deleteProject = async (id: number): Promise<{ success: boolean; message: string }> => {
   try {
-    await apiClient.delete(`/projects/${id}`)
+    const response = await apiClient.delete<{ success: boolean; message: string }>(`/projects/${id}`)
+    return response.data
   } catch (error) {
     throw error
   }

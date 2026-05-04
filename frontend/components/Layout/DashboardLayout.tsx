@@ -90,6 +90,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         { name: 'Metric Configurator', href: '/dashboard/admin/metrics', icon: FaCog },
         { name: 'Scan Logs', href: '/dashboard/admin/logs', icon: FaFileAlt },
         { name: 'User Access', href: '/dashboard/admin/users', icon: FaUsers },
+        { name: 'Reports', href: '/dashboard/admin/reports', icon: FaFileAlt },
       ]
     : [
         { name: 'Dashboard', href: '/dashboard', icon: FaHome },
