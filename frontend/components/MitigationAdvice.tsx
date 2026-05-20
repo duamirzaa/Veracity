@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { FaLightbulb, FaRobot, FaSpinner, FaExclamationTriangle, FaComments, FaArrowRight } from 'react-icons/fa'
+import { FaLightbulb, FaRobot, FaSpinner, FaExclamationTriangle, FaComments, FaArrowRight, FaChevronDown } from 'react-icons/fa'
 import * as projectsService from '@/services/projects'
 import type { MitigationStrategy, MitigationResponse } from '@/services/projects'
 
@@ -65,7 +65,10 @@ export default function MitigationAdvice({ projectId }: MitigationAdviceProps) {
     )
   }
 
-  if (!data || (!data.has_advice && (!data.strategies || data.strategies.length === 0))) {
+  const hasStrategies = data?.strategies && data.strategies.length > 0;
+  const hasRiskFactors = data?.risk_factors && data.risk_factors.length > 0;
+
+  if (!data || (!data.has_advice && !hasStrategies && !hasRiskFactors)) {
     return (
       <div className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-10 border border-dark-700/50 text-center">
         <div className="w-16 h-16 bg-primary-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-primary-500/20">
@@ -86,32 +89,7 @@ export default function MitigationAdvice({ projectId }: MitigationAdviceProps) {
     )
   }
 
-  // If general advice is false, show the global CTA
-  if (!data.has_advice) {
-    return (
-      <div className="bg-gradient-to-br from-dark-800 to-dark-900 rounded-xl p-8 border border-primary-500/30 shadow-2xl relative overflow-hidden group">
-        <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary-500/10 blur-[100px] rounded-full group-hover:bg-primary-500/20 transition-all duration-700"></div>
-        
-        <div className="relative z-10 text-center flex flex-col items-center">
-          <div className="w-20 h-20 bg-primary-500/20 rounded-3xl flex items-center justify-center mb-6 border border-primary-500/40 shadow-inner">
-            <FaRobot className="text-4xl text-primary-400" />
-          </div>
-          <h2 className="text-xl font-bold text-white mb-3 tracking-tight">Personalized Mitigation Required</h2>
-          <p className="text-gray-400 mb-8 text-sm max-w-lg leading-relaxed">
-            Standard strategies aren't enough for this project's unique complexity. Connect with <span className="text-primary-400 font-bold">Vera</span>, our specialized AI agent, to generate a tailored fix plan.
-          </p>
-          <button
-            onClick={() => handleRedirectToChat()}
-            className="group/btn inline-flex items-center gap-3 px-8 py-3.5 bg-primary-500 hover:bg-primary-600 text-white rounded-xl transition-all text-sm font-bold shadow-xl shadow-primary-500/30 hover:scale-105 active:scale-95"
-          >
-            <FaComments className="text-lg" />
-            <span>Consult AI Assistant</span>
-            <FaArrowRight className="group-hover/btn:translate-x-1 transition-transform" />
-          </button>
-        </div>
-      </div>
-    )
-  }
+
 
   return (
     <div className="space-y-3">
@@ -127,27 +105,61 @@ export default function MitigationAdvice({ projectId }: MitigationAdviceProps) {
         </div>
       </div>
 
-      <div className="grid gap-2">
-        {data.strategies.map((strategy, index) => (
-          <div 
-            key={index}
-            className="group bg-dark-800/40 backdrop-blur-sm rounded-lg border border-dark-700/40 p-3 hover:bg-dark-800/60 transition-all duration-200"
-          >
-            <div className="flex flex-col md:flex-row md:items-start gap-3">
-              <div className="flex-shrink-0">
-                <div className="w-6 h-6 bg-dark-700/50 rounded flex items-center justify-center border border-dark-600/50 text-primary-400 text-[11px] font-bold">
-                  {index + 1}
+      {hasRiskFactors && (
+        <div className="grid gap-2 mb-4">
+          {data.risk_factors!.map((risk, index) => (
+            <details 
+              key={risk.feature}
+              className="group bg-dark-800/40 backdrop-blur-sm rounded-lg border border-dark-700/40 hover:bg-dark-800/60 transition-all duration-200 cursor-pointer overflow-hidden"
+            >
+              <summary className="p-3 flex items-center justify-between outline-none list-none [&::-webkit-details-marker]:hidden">
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 bg-red-500/10 rounded flex items-center justify-center border border-red-500/20 text-red-400 text-[11px] font-bold">
+                    {index + 1}
+                  </div>
+                  <span className="text-[13px] font-bold text-white group-hover:text-primary-400 transition-colors">
+                    {risk.feature}
+                  </span>
+                  <span className="text-[11px] text-gray-400 border border-dark-600 px-2 py-0.5 rounded">
+                    Value: {risk.value}
+                  </span>
+                </div>
+                <FaChevronDown className="text-gray-400 text-xs group-open:rotate-180 transition-transform" />
+              </summary>
+              <div className="px-4 pb-3 pt-1 text-[12px] text-gray-300 border-t border-dark-700/40 bg-dark-900/30">
+                <div className="flex items-start gap-2">
+                  <FaRobot className="text-primary-500 mt-0.5 flex-shrink-0 text-[11px]" />
+                  <p className="leading-relaxed">
+                    {risk.advice}
+                  </p>
                 </div>
               </div>
+            </details>
+          ))}
+        </div>
+      )}
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-[13px] font-bold text-white group-hover:text-primary-400 transition-colors">
+      {hasStrategies && !hasRiskFactors && (
+        <div className="grid gap-2 mb-4">
+          {data.strategies.map((strategy, index) => (
+            <details 
+              key={strategy.feature_name}
+              className="group bg-dark-800/40 backdrop-blur-sm rounded-lg border border-dark-700/40 hover:bg-dark-800/60 transition-all duration-200 cursor-pointer overflow-hidden"
+            >
+              <summary className="p-3 flex items-center justify-between outline-none list-none [&::-webkit-details-marker]:hidden">
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 bg-dark-700/50 rounded flex items-center justify-center border border-dark-600/50 text-primary-400 text-[11px] font-bold">
+                    {index + 1}
+                  </div>
+                  <span className="text-[13px] font-bold text-white group-hover:text-primary-400 transition-colors">
                     {strategy.feature_name}
-                  </h3>
+                  </span>
                   {!strategy.has_advice && (
                      <button
-                        onClick={() => handleRedirectToChat(strategy.feature_name)}
+                        onClick={(e) => {
+                          e.preventDefault(); // Prevent accordion from toggling when clicking button
+                          handleRedirectToChat(strategy.feature_name);
+                        }}
                         className="flex items-center gap-1.5 text-[11px] text-primary-400 hover:text-primary-300 font-semibold transition-colors"
                       >
                         <FaRobot className="text-xs" />
@@ -155,7 +167,10 @@ export default function MitigationAdvice({ projectId }: MitigationAdviceProps) {
                       </button>
                   )}
                 </div>
-                
+                <FaChevronDown className="text-gray-400 text-xs group-open:rotate-180 transition-transform" />
+              </summary>
+              
+              <div className="px-4 pb-3 pt-1 text-[12px] text-gray-300 border-t border-dark-700/40 bg-dark-900/30">
                 {strategy.has_advice ? (
                   <div className="flex items-start gap-2 text-[12px] text-gray-400">
                     <FaRobot className="text-primary-500 mt-0.5 flex-shrink-0 text-[11px]" />
@@ -169,10 +184,10 @@ export default function MitigationAdvice({ projectId }: MitigationAdviceProps) {
                   </p>
                 )}
               </div>
-            </div>
-          </div>
-        ))}
-      </div>
+            </details>
+          ))}
+        </div>
+      )}
       
       <div className="bg-dark-800/20 rounded-lg p-2 border border-dark-700/30 flex items-center justify-between">
         <div className="flex items-center gap-2 text-[11px] text-gray-500">

@@ -243,6 +243,7 @@ export interface MitigationStrategy {
 export interface MitigationResponse {
   has_advice: boolean
   strategies: MitigationStrategy[]
+  risk_factors?: { feature: string; value: number; threshold: number; advice: string }[]
 }
 
 /**
@@ -257,3 +258,27 @@ export const getProjectMitigation = async (projectId: number): Promise<Mitigatio
     throw error
   }
 }
+
+export interface RefactorResponse {
+  project_id: string
+  project_name: string
+  original_code: string
+  improved_code: string
+  explanation: string
+  metrics_estimate: string
+  generated_at: string
+}
+
+/**
+ * AI Code Refactoring & Improvement
+ * POST /api/refactor/:projectId
+ */
+export const refactorProjectCode = async (projectId: number): Promise<RefactorResponse> => {
+  try {
+    const response = await apiClient.post<RefactorResponse>(`/refactor/${projectId}`)
+    return response.data
+  } catch (error) {
+    throw error
+  }
+}
+

@@ -20,33 +20,13 @@ import {
 import { getAdminDashboard } from '@/services/admin'
 import type { DashboardStats } from '@/services/admin'
 
-// Mock data - fallback
-const mockAnalysisDashboard: DashboardStats = {
-  avgRisk: 0.65,
-  totalScans: 12450,
-  successfulScans: 11800,
-  failedScans: 650,
-  riskDistribution: [
-    { name: 'Low', value: 45, color: '#14a085' },
-    { name: 'Medium', value: 30, color: '#1abba1' },
-    { name: 'High', value: 20, color: '#ff9500' },
-    { name: 'Critical', value: 5, color: '#ff4444' },
-  ],
-  scanTrends: [
-    { date: 'Jan', scans: 1200, avgRisk: 0.62 },
-    { date: 'Feb', scans: 1350, avgRisk: 0.64 },
-    { date: 'Mar', scans: 1500, avgRisk: 0.63 },
-    { date: 'Apr', scans: 1680, avgRisk: 0.65 },
-    { date: 'May', scans: 1800, avgRisk: 0.66 },
-    { date: 'Jun', scans: 1920, avgRisk: 0.65 },
-  ],
-}
+
 
 export default function AnalysisDashboardPage() {
   const { user, isAuthenticated } = useAuth()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [analysisDashboard, setAnalysisDashboard] = useState<DashboardStats>(mockAnalysisDashboard)
+  const [analysisDashboard, setAnalysisDashboard] = useState<DashboardStats | null>(null)
 
   // Load admin dashboard data on mount
   useEffect(() => {
@@ -59,8 +39,6 @@ export default function AnalysisDashboardPage() {
       } catch (err) {
         console.error('Failed to load admin dashboard:', err)
         setError('Failed to load dashboard data')
-        // Keep mock data as fallback
-        setAnalysisDashboard(mockAnalysisDashboard)
       } finally {
         setLoading(false)
       }
@@ -122,6 +100,8 @@ export default function AnalysisDashboardPage() {
         )}
 
         {/* Big Picture Stats */}
+        {analysisDashboard ? (
+          <>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 border border-dark-700/50">
             <p className="text-sm text-gray-400 mb-2">Average Risk</p>
@@ -143,7 +123,7 @@ export default function AnalysisDashboardPage() {
               {analysisDashboard.successfulScans.toLocaleString()}
             </p>
             <p className="text-xs text-gray-500 mt-2">
-              {((analysisDashboard.successfulScans / analysisDashboard.totalScans) * 100).toFixed(1)}% success rate
+              {analysisDashboard.totalScans > 0 ? ((analysisDashboard.successfulScans / analysisDashboard.totalScans) * 100).toFixed(1) : '0.0'}% success rate
             </p>
           </div>
           <div className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 border border-dark-700/50">
@@ -152,7 +132,7 @@ export default function AnalysisDashboardPage() {
               {analysisDashboard.failedScans.toLocaleString()}
             </p>
             <p className="text-xs text-gray-500 mt-2">
-              {((analysisDashboard.failedScans / analysisDashboard.totalScans) * 100).toFixed(1)}% failure rate
+              {analysisDashboard.totalScans > 0 ? ((analysisDashboard.failedScans / analysisDashboard.totalScans) * 100).toFixed(1) : '0.0'}% failure rate
             </p>
           </div>
         </div>
@@ -226,6 +206,12 @@ export default function AnalysisDashboardPage() {
             </ResponsiveContainer>
           </div>
         </div>
+          </>
+        ) : !loading && !error && (
+          <div className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-8 border border-dark-700/50 text-center">
+            <p className="text-gray-400">No dashboard data available.</p>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   )
